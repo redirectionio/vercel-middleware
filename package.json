@@ -1,0 +1,13 @@
+{
+    "name": "@redirection.io/vercel-middleware",
+    "version": "0.1.0",
+    "description": "Vercel Edge Middleware for redirection.io",
+    "main": "middleware.js",
+    "license": "MIT",
+    "private": false,
+    "type": "module",
+    "dependencies": {
+        "@redirection.io/wasm": "^0.1.1",
+        "@vercel/edge": "^1.1.1"
+    }
+}
