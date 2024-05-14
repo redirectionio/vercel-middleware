@@ -1,7 +1,7 @@
 import {ipAddress, next, RequestContext} from "@vercel/edge";
-import * as redirectionio from '@redirection.io/wasm/wasm_bg.js';
+import * as redirectionio from '@redirection.io/redirectionio/redirectionio_bg.js';
 // @ts-ignore
-import wasmModule from '@redirection.io/wasm/wasm_bg.wasm?module';
+import wasmModule from '@redirection.io/redirectionio/redirectionio_bg.wasm?module';
 
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || '';
 const REDIRECTIONIO_INSTANCE_NAME = process.env.INSTANCE_NAME || 'redirection-io-vercel-middleware'
@@ -16,11 +16,11 @@ async function initWebAssembly() {
         return;
     }
 
-    const imports = {"./wasm_bg.js": {}};
+    const imports = {"./redirectionio_bg.js": {}};
 
     for (const functionName of Object.keys(redirectionio)) {
         if (functionName.startsWith("__") && functionName !== "__wbg_set_wasm") {
-            imports["./wasm_bg.js"][functionName] = redirectionio[functionName];
+            imports["./redirectionio_bg.js"][functionName] = redirectionio[functionName];
         }
     }
 

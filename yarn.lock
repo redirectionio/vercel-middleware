@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@redirection.io/wasm@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@redirection.io/wasm/-/wasm-0.1.1.tgz#9f424e3d25ad49adc13eb0f130c496b22b1241b6"
-  integrity sha512-Pq8CejYbI9klGZwBEnpYpQgdar9vqKqqUcJT0VBZuFboffCK2YVSqFouwBdjXx9g667Im4UK2Vw6boJEkOc6eA==
+"@redirection.io/redirectionio@^2.11.1":
+  version "2.11.1"
+  resolved "https://registry.yarnpkg.com/@redirection.io/redirectionio/-/redirectionio-2.11.1.tgz#546b8132c6940c929fa3b0a2069bb3a0d60df4ff"
+  integrity sha512-G+0nIxCtbKf+UJxGDe6tD9yrfEvYEMCYIeumAuN5J2/rPqgQ5W0pH77T36WUMpeYIsPBqc7ClIxnU4eyH7BZJg==
 
 "@vercel/edge@^1.1.1":
   version "1.1.1"
