@@ -186,7 +186,7 @@ async function proxy(request: Request, action: redirectionio.Action) {
         let response;
 
         if (statusCodeBeforeResponse === 0) {
-            response = await next();
+            response = await fetch(request);
         } else {
             response = new Response('', {
                 status: Number(statusCodeBeforeResponse),
