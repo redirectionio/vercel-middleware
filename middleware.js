@@ -1,38 +1,13 @@
 import {ipAddress, next, RequestContext} from "@vercel/edge";
-import * as redirectionio from '@redirection.io/redirectionio/redirectionio_bg.js';
-// @ts-ignore
-import wasmModule from '@redirection.io/redirectionio/redirectionio_bg.wasm?module';
+import * as redirectionio from '@redirection.io/redirectionio';
 
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || '';
-const REDIRECTIONIO_INSTANCE_NAME = process.env.INSTANCE_NAME || 'redirection-io-vercel-middleware'
+const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || 'redirection-io-vercel-middleware';
 const REDIRECTIONIO_VERSION = 'redirection-io-vercel-middleware/0.1.0';
 const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === 'true' : false;
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
 
-let loadedModule;
-
-async function initWebAssembly() {
-    if (loadedModule) {
-        return;
-    }
-
-    const imports = {"./redirectionio_bg.js": {}};
-
-    for (const functionName of Object.keys(redirectionio)) {
-        if (functionName.startsWith("__") && functionName !== "__wbg_set_wasm") {
-            imports["./redirectionio_bg.js"][functionName] = redirectionio[functionName];
-        }
-    }
-
-    const module = await WebAssembly.instantiate(wasmModule, imports) as unknown as WebAssembly.Instance;
-    loadedModule = module.exports;
-    redirectionio.__wbg_set_wasm(module.exports);
-
-    // This must be done only once
-    redirectionio.init_log();
-}
-
-export default async function middleware(request: Request, context: RequestContext) {
+export default async function middleware(request, context) {
     if (!REDIRECTIONIO_TOKEN) {
         console.warn('No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.');
 
@@ -41,7 +16,7 @@ export default async function middleware(request: Request, context: RequestConte
 
     const startTimestamp = Date.now();
 
-    await initWebAssembly();
+    await redirectionio.init();
 
     const ip = ipAddress(request);
     const redirectionIORequest = createRedirectionIORequest(request, ip);
@@ -49,20 +24,13 @@ export default async function middleware(request: Request, context: RequestConte
     const [response, backendStatusCode] = await proxy(request, action);
 
     context.waitUntil(async function () {
-        await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip || "");
+        await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
     }());
 
     return response;
 }
 
 function splitSetCookies(cookiesString) {
-    if (Array.isArray(cookiesString)) {
-        return cookiesString;
-    }
-    if (typeof cookiesString !== "string") {
-        return [];
-    }
-
     var cookiesStrings = [];
     var pos = 0;
     var start;
@@ -128,7 +96,7 @@ function splitSetCookies(cookiesString) {
     return cookiesStrings;
 }
 
-function createRedirectionIORequest(request: Request, ip: string) {
+function createRedirectionIORequest(request, ip) {
     const urlObject = new URL(request.url);
     const redirectionioRequest = new redirectionio.Request(
         urlObject.pathname + urlObject.search,
@@ -148,7 +116,7 @@ function createRedirectionIORequest(request: Request, ip: string) {
     return redirectionioRequest;
 }
 
-async function fetchRedirectionIOAction(redirectionIORequest: redirectionio.Request): Promise<redirectionio.Action> {
+async function fetchRedirectionIOAction(redirectionIORequest) {
     try {
         const response = await Promise.race([
             fetch('https://agent.redirection.io/' + REDIRECTIONIO_TOKEN + '/action', {
@@ -162,7 +130,7 @@ async function fetchRedirectionIOAction(redirectionIORequest: redirectionio.Requ
             new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Timeout')), REDIRECTIONIO_TIMEOUT)
             ),
-        ]) as Response;
+        ]);
 
         const actionStr = await response.text();
 
@@ -179,7 +147,7 @@ async function fetchRedirectionIOAction(redirectionIORequest: redirectionio.Requ
 }
 
 /* Redirection.io logic */
-async function proxy(request: Request, action: redirectionio.Action) {
+async function proxy(request, action) {
     try {
         const statusCodeBeforeResponse = action.get_status_code(0);
 
@@ -195,9 +163,10 @@ async function proxy(request: Request, action: redirectionio.Action) {
 
         const backendStatusCode = response.status;
         const statusCodeAfterResponse = action.get_status_code(backendStatusCode);
+        let status = response.status;
 
         if (statusCodeAfterResponse !== 0) {
-            response.status = Number(statusCodeAfterResponse);
+            status = Number(statusCodeAfterResponse);
         }
 
         const headerMap = new redirectionio.HeaderMap();
@@ -222,7 +191,7 @@ async function proxy(request: Request, action: redirectionio.Action) {
         }
 
         response = new Response(response.body, {
-            status: response.status,
+            status: status,
             statusText: response.statusText,
             headers: newHeaders,
         });
@@ -248,9 +217,28 @@ async function proxy(request: Request, action: redirectionio.Action) {
     }
 }
 
-async function createBodyFilter(readable: ReadableStream, writable: WritableStream, bodyFilter: redirectionio.BodyFilter) {
+async function createBodyFilter(readable, writable, bodyFilter) {
     let writer = writable.getWriter();
-    let reader = readable.getReader();
+    let reader = readable?.getReader();
+
+    if (!reader) {
+        const filteredData = bodyFilter.filter(new Uint8Array());
+
+        if (filteredData) {
+            await writer.write(filteredData);
+        }
+
+        const lastData = bodyFilter.end();
+
+        if (lastData) {
+            await writer.write(lastData);
+        }
+
+        await writer.close();
+
+        return;
+    }
+
     let data = await reader.read();
 
     while (!data.done) {
@@ -272,7 +260,7 @@ async function createBodyFilter(readable: ReadableStream, writable: WritableStre
     await writer.close();
 }
 
-async function log(response: Response, backendStatusCode: number, redirectionioRequest: redirectionio.Request, startTimestamp: number, action: redirectionio.Action, clientIP: string) {
+async function log(response, backendStatusCode, redirectionioRequest, startTimestamp, action, clientIP) {
     if (response === null) {
         return;
     }
@@ -295,7 +283,7 @@ async function log(response: Response, backendStatusCode: number, redirectionioR
             action,
             'vercel-edge-middleware/' + REDIRECTIONIO_VERSION,
             BigInt(startTimestamp),
-            clientIP,
+            clientIP ?? '',
         );
 
         return await fetch(

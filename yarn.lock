@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@redirection.io/redirectionio@^2.11.1":
-  version "2.11.1"
-  resolved "https://registry.yarnpkg.com/@redirection.io/redirectionio/-/redirectionio-2.11.1.tgz#546b8132c6940c929fa3b0a2069bb3a0d60df4ff"
-  integrity sha512-G+0nIxCtbKf+UJxGDe6tD9yrfEvYEMCYIeumAuN5J2/rPqgQ5W0pH77T36WUMpeYIsPBqc7ClIxnU4eyH7BZJg==
+"@redirection.io/redirectionio@^2.11.8":
+  version "2.11.8"
+  resolved "https://registry.yarnpkg.com/@redirection.io/redirectionio/-/redirectionio-2.11.8.tgz#9d92ec19f51a6f63e482e973657097c1a18f781e"
+  integrity sha512-2FJ9FcrZLDbi3BX9cHVIu0PgwHfnsfEEFDFODhJM1aKtftTLgwQrhrBZQGIcbQHhK1zn2AJqyrOZfcFs6hEdzA==
 
 "@vercel/edge@^1.1.1":
   version "1.1.1"
