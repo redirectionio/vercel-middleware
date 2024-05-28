@@ -1,12 +1,16 @@
 {
     "compilerOptions": {
-        "target": "es5",
-        "module": "commonjs",
+        "target": "ES2022",
+        "module": "ES2022",
         "lib": [
-            "es2020",
+            "ES2023",
             "DOM"
         ],
         "strict": true,
-        "strictNullChecks": true
-    }
+        "strictNullChecks": true,
+        "moduleResolution": "Node"
+    },
+    "exclude": [
+        "node_modules"
+    ]
 }
