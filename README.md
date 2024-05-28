@@ -46,7 +46,7 @@ You may have an existing middleware in your Vercel project. In this case, you ca
 which allows to chain existing middleware with redirection.io middleware.
 
 ```typescript
-import {createMiddleware} from '@redirection.io/vercel-middleware';
+import {createRedirectionIoMiddleware} from '@redirection.io/vercel-middleware';
 
 const myExistingMiddleware = (request: Request) => {
     // Your existing middleware logic
@@ -54,7 +54,30 @@ const myExistingMiddleware = (request: Request) => {
     return next();
 }
 
-const middleware = createMiddleware({
+const middleware = createRedirectionIoMiddleware({
+    previousMiddleware: myExistingMiddleware, // In this case your middleware is executed before redirection.io middleware
+    nextMiddleware: myExistingMiddleware, // In this case your middleware is executed after redirection.io middleware
+});
+
+export default middleware;
+```
+
+### Next.js
+
+If you are using next.js middlewares, you can use the `createRedirectionIoMiddleware` method
+from `@redirection.io/vercel-middleware/next` which is compatible with `NextRequest` type.
+
+```typescript
+import {createRedirectionIoMiddleware} from '@redirection.io/vercel-middleware/next';
+import {NextRequest} from "next/server";
+
+const myExistingMiddleware = (request: NextRequest) => {
+    // Your existing middleware logic
+
+    return next();
+}
+
+const middleware = createRedirectionIoMiddleware({
     previousMiddleware: myExistingMiddleware, // In this case your middleware is executed before redirection.io middleware
     nextMiddleware: myExistingMiddleware, // In this case your middleware is executed after redirection.io middleware
 });
