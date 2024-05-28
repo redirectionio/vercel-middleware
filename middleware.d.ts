@@ -1,9 +1,10 @@
 import { RequestContext } from "@vercel/edge";
-export type Middleware = (request: Request, context: RequestContext) => Promise<Response>;
-export type CreateMiddlewareConfig = {
+import type { NextRequest } from "next/server";
+type Middleware = (request: Request | NextRequest, context: RequestContext) => Response | Promise<Response>;
+type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
 };
-export declare const createMiddleware: (config: CreateMiddlewareConfig) => Middleware;
+export declare const createRedirectionIoMiddleware: (config: CreateMiddlewareConfig) => Middleware;
 declare const defaultMiddleware: Middleware;
 export default defaultMiddleware;

@@ -5,7 +5,7 @@ const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || '
 const REDIRECTIONIO_VERSION = 'redirection-io-vercel-middleware/0.1.0';
 const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === 'true' : false;
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
-export const createMiddleware = (config) => {
+export const createRedirectionIoMiddleware = (config) => {
     return async (request, context) => {
         let middlewareRequest = request;
         if (config.previousMiddleware) {
@@ -13,7 +13,7 @@ export const createMiddleware = (config) => {
             if (response.status !== 200) {
                 return response;
             }
-            middlewareRequest = nextResponseToRequest(request, response);
+            middlewareRequest = middlewareResponseToRequest(request, response);
         }
         return handler(middlewareRequest, context, async (request) => {
             let response = null;
@@ -22,9 +22,10 @@ export const createMiddleware = (config) => {
                 if (response.status !== 200) {
                     return response;
                 }
-                request = nextResponseToRequest(request, response);
+                request = middlewareResponseToRequest(request, response);
             }
-            const backendResponse = await fetch(request);
+            const fetchResponse = await fetch(request);
+            const backendResponse = new Response(fetchResponse.body, fetchResponse);
             if (response) {
                 response.headers.forEach((value, key) => {
                     if (!key.startsWith('x-middleware-')) {
@@ -36,11 +37,15 @@ export const createMiddleware = (config) => {
         });
     };
 };
-const defaultMiddleware = createMiddleware({});
+const defaultMiddleware = createRedirectionIoMiddleware({});
 export default defaultMiddleware;
 async function handler(request, context, fetchResponse) {
     if (!REDIRECTIONIO_TOKEN) {
         console.warn('No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.');
+        return next();
+    }
+    // Avoid infinite loop
+    if (request.headers.get('x-redirectionio-middleware') === 'true') {
         return next();
     }
     const startTimestamp = Date.now();
@@ -48,7 +53,15 @@ async function handler(request, context, fetchResponse) {
     const ip = ipAddress(request);
     const redirectionIORequest = createRedirectionIORequest(request, ip);
     const action = await fetchRedirectionIOAction(redirectionIORequest);
-    const [response, backendStatusCode] = await proxy(request, action, fetchResponse);
+    const [response, backendStatusCode] = await proxy(request, action, (request) => {
+        request.headers.set('x-redirectionio-middleware', 'true');
+        return fetchResponse(request);
+    });
+    const url = new URL(request.url);
+    const location = response.headers.get("Location");
+    if (location && location.startsWith('/')) {
+        response.headers.set("Location", url.origin + location);
+    }
     context.waitUntil(async function () {
         await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
     }());
@@ -122,29 +135,29 @@ function createRedirectionIORequest(request, ip) {
     }
     return redirectionioRequest;
 }
-function nextResponseToRequest(originalRequest, nextResponse) {
-    let nextRequest = originalRequest;
-    if (nextResponse.headers.has('x-middleware-rewrite')) {
-        const newUrl = nextResponse.headers.get('x-middleware-rewrite');
+function middlewareResponseToRequest(originalRequest, response) {
+    let request = originalRequest;
+    if (response.headers.has('x-middleware-rewrite')) {
+        const newUrl = response.headers.get('x-middleware-rewrite');
         if (newUrl) {
-            nextRequest = new Request({
-                ...nextRequest,
+            request = new Request({
+                ...originalRequest,
                 url: newUrl,
             });
         }
     }
-    if (nextResponse.headers.has('x-middleware-override-headers')) {
-        const headersToOverride = nextResponse.headers.get('x-middleware-override-headers');
+    if (response.headers.has('x-middleware-override-headers')) {
+        const headersToOverride = response.headers.get('x-middleware-override-headers');
         if (headersToOverride) {
             headersToOverride.split(',').forEach(header => {
-                const value = nextResponse.headers.get('x-middleware-request-' + header);
+                const value = response.headers.get('x-middleware-request-' + header);
                 if (value) {
-                    nextRequest.headers.set(header, value);
+                    request.headers.set(header, value);
                 }
             });
         }
     }
-    return nextRequest;
+    return request;
 }
 async function fetchRedirectionIOAction(redirectionIORequest) {
     try {

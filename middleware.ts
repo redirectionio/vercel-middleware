@@ -1,5 +1,6 @@
-import {ipAddress, next, rewrite, RequestContext} from "@vercel/edge";
+import {ipAddress, next, RequestContext} from "@vercel/edge";
 import * as redirectionio from '@redirection.io/redirectionio';
+import type {NextRequest} from "next/server";
 
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || '';
 const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || 'redirection-io-vercel-middleware';
@@ -7,16 +8,16 @@ const REDIRECTIONIO_VERSION = 'redirection-io-vercel-middleware/0.1.0';
 const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === 'true' : false;
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
 
-export type Middleware = (request: Request, context: RequestContext) => Promise<Response>;
+type Middleware = (request: Request | NextRequest, context: RequestContext) => Response | Promise<Response>;
 
 type FetchResponse = (request: Request) => Promise<Response>;
 
-export type CreateMiddlewareConfig = {
+type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
 }
 
-export const createMiddleware = (config: CreateMiddlewareConfig): Middleware => {
+export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
     return async (request, context) => {
         let middlewareRequest = request;
 
@@ -27,10 +28,10 @@ export const createMiddleware = (config: CreateMiddlewareConfig): Middleware => 
                 return response;
             }
 
-            middlewareRequest = nextResponseToRequest(request, response);
+            middlewareRequest = middlewareResponseToRequest(request, response);
         }
 
-        return handler(middlewareRequest, context, async (request: Request): Promise<Response> => {
+        return handler(middlewareRequest, context, async (request): Promise<Response> => {
             let response: Response | null = null;
 
             if (config.nextMiddleware) {
@@ -40,10 +41,11 @@ export const createMiddleware = (config: CreateMiddlewareConfig): Middleware => 
                     return response;
                 }
 
-                request = nextResponseToRequest(request, response);
+                request = middlewareResponseToRequest(request, response);
             }
 
-            const backendResponse = await fetch(request);
+            const fetchResponse = await fetch(request);
+            const backendResponse = new Response(fetchResponse.body, fetchResponse);
 
             if (response) {
                 response.headers.forEach((value, key) => {
@@ -58,7 +60,7 @@ export const createMiddleware = (config: CreateMiddlewareConfig): Middleware => 
     }
 }
 
-const defaultMiddleware = createMiddleware({});
+const defaultMiddleware = createRedirectionIoMiddleware({});
 
 export default defaultMiddleware;
 
@@ -69,6 +71,11 @@ async function handler(request: Request, context: RequestContext, fetchResponse:
         return next();
     }
 
+    // Avoid infinite loop
+    if (request.headers.get('x-redirectionio-middleware') === 'true') {
+        return next();
+    }
+
     const startTimestamp = Date.now();
 
     await redirectionio.init();
@@ -76,7 +83,18 @@ async function handler(request: Request, context: RequestContext, fetchResponse:
     const ip = ipAddress(request);
     const redirectionIORequest = createRedirectionIORequest(request, ip);
     const action = await fetchRedirectionIOAction(redirectionIORequest);
-    const [response, backendStatusCode] = await proxy(request, action, fetchResponse);
+    const [response, backendStatusCode] = await proxy(request, action, (request) => {
+        request.headers.set('x-redirectionio-middleware', 'true');
+
+        return fetchResponse(request);
+    });
+
+    const url = new URL(request.url);
+    const location = response.headers.get("Location");
+
+    if (location && location.startsWith('/')) {
+        response.headers.set("Location", url.origin + location);
+    }
 
     context.waitUntil(async function () {
         await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
@@ -171,35 +189,35 @@ function createRedirectionIORequest(request: Request, ip?: string) {
     return redirectionioRequest;
 }
 
-function nextResponseToRequest(originalRequest: Request, nextResponse: Response): Request {
-    let nextRequest = originalRequest;
+function middlewareResponseToRequest(originalRequest: Request, response: Response): Request {
+    let request = originalRequest;
 
-    if (nextResponse.headers.has('x-middleware-rewrite')) {
-        const newUrl = nextResponse.headers.get('x-middleware-rewrite');
+    if (response.headers.has('x-middleware-rewrite')) {
+        const newUrl = response.headers.get('x-middleware-rewrite');
 
         if (newUrl) {
-            nextRequest = new Request({
-                ...nextRequest,
+            request = new Request({
+                ...originalRequest,
                 url: newUrl,
             });
         }
     }
 
-    if (nextResponse.headers.has('x-middleware-override-headers')) {
-        const headersToOverride = nextResponse.headers.get('x-middleware-override-headers');
+    if (response.headers.has('x-middleware-override-headers')) {
+        const headersToOverride = response.headers.get('x-middleware-override-headers');
 
         if (headersToOverride) {
             headersToOverride.split(',').forEach(header => {
-                const value = nextResponse.headers.get('x-middleware-request-' + header);
+                const value = response.headers.get('x-middleware-request-' + header);
 
                 if (value) {
-                    nextRequest.headers.set(header, value);
+                    request.headers.set(header, value);
                 }
             });
         }
     }
 
-    return nextRequest;
+    return request;
 }
 
 async function fetchRedirectionIOAction(redirectionIORequest: redirectionio.Request) {

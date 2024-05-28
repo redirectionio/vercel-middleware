@@ -3,12 +3,13 @@
         "target": "ES2022",
         "module": "ES2022",
         "lib": [
-            "ES2023",
+            "es2022",
             "DOM"
         ],
         "strict": true,
         "strictNullChecks": true,
-        "moduleResolution": "Node"
+        "moduleResolution": "Bundler",
+        "skipLibCheck": true
     },
     "exclude": [
         "node_modules"

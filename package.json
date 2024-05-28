@@ -8,13 +8,19 @@
     "type": "module",
     "files": [
         "middleware.js",
-        "middleware.d.ts"
+        "middleware.d.ts",
+        "next.js",
+        "next.d.ts"
     ],
     "dependencies": {
         "@redirection.io/redirectionio": "^2.11.8",
         "@vercel/edge": "^1.1.1"
     },
     "devDependencies": {
+        "next": "^14.2.3",
         "typescript": "^5.4.5"
+    },
+    "optionalDependencies": {
+        "next": "^14.2.3"
     }
 }
