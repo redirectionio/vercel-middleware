@@ -7,7 +7,6 @@ export const createRedirectionIoMiddleware = (config) => {
     const configNextMiddleware = config.nextMiddleware;
     if (configPreviousMiddleware) {
         previousMiddleware = (req, context) => {
-            const nextRequest = new NextRequest(req);
             return configPreviousMiddleware(new NextRequest(req), context);
         };
     }

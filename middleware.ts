@@ -19,16 +19,22 @@ type CreateMiddlewareConfig = {
 
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
     return async (request, context) => {
-        let middlewareRequest = request;
+        const body = request.body ? await request.blob() : null;
+
+        let middlewareRequest = new Request(request.url, {
+            method: request.method,
+            headers: request.headers,
+            body,
+        });
 
         if (config.previousMiddleware) {
-            const response = await config.previousMiddleware(request, context);
+            const response = await config.previousMiddleware(middlewareRequest, context);
 
             if (response.status !== 200) {
                 return response;
             }
 
-            middlewareRequest = middlewareResponseToRequest(request, response);
+            middlewareRequest = middlewareResponseToRequest(middlewareRequest, response, body);
         }
 
         return handler(middlewareRequest, context, async (request): Promise<Response> => {
@@ -41,7 +47,7 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
                     return response;
                 }
 
-                request = middlewareResponseToRequest(request, response);
+                request = middlewareResponseToRequest(request, response, body);
             }
 
             const fetchResponse = await fetch(request);
@@ -189,14 +195,18 @@ function createRedirectionIORequest(request: Request, ip?: string) {
     return redirectionioRequest;
 }
 
-function middlewareResponseToRequest(originalRequest: Request, response: Response): Request {
+function middlewareResponseToRequest(originalRequest: Request, response: Response, body: Blob | null): Request {
     let request = originalRequest;
 
     if (response.headers.has('x-middleware-rewrite')) {
         const newUrl = response.headers.get('x-middleware-rewrite');
 
         if (newUrl) {
-            request = new Request(newUrl, originalRequest);
+            request = new Request(newUrl, {
+                method: request.method,
+                headers: request.headers,
+                body,
+            });
         }
     }
 

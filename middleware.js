@@ -7,13 +7,18 @@ const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_R
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
 export const createRedirectionIoMiddleware = (config) => {
     return async (request, context) => {
-        let middlewareRequest = request;
+        const body = request.body ? await request.blob() : null;
+        let middlewareRequest = new Request(request.url, {
+            method: request.method,
+            headers: request.headers,
+            body,
+        });
         if (config.previousMiddleware) {
-            const response = await config.previousMiddleware(request, context);
+            const response = await config.previousMiddleware(middlewareRequest, context);
             if (response.status !== 200) {
                 return response;
             }
-            middlewareRequest = middlewareResponseToRequest(request, response);
+            middlewareRequest = middlewareResponseToRequest(middlewareRequest, response, body);
         }
         return handler(middlewareRequest, context, async (request) => {
             let response = null;
@@ -22,7 +27,7 @@ export const createRedirectionIoMiddleware = (config) => {
                 if (response.status !== 200) {
                     return response;
                 }
-                request = middlewareResponseToRequest(request, response);
+                request = middlewareResponseToRequest(request, response, body);
             }
             const fetchResponse = await fetch(request);
             const backendResponse = new Response(fetchResponse.body, fetchResponse);
@@ -135,14 +140,15 @@ function createRedirectionIORequest(request, ip) {
     }
     return redirectionioRequest;
 }
-function middlewareResponseToRequest(originalRequest, response) {
+function middlewareResponseToRequest(originalRequest, response, body) {
     let request = originalRequest;
     if (response.headers.has('x-middleware-rewrite')) {
         const newUrl = response.headers.get('x-middleware-rewrite');
         if (newUrl) {
-            request = new Request({
-                ...originalRequest,
-                url: newUrl,
+            request = new Request(newUrl, {
+                method: request.method,
+                headers: request.headers,
+                body,
             });
         }
     }
