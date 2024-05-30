@@ -196,10 +196,7 @@ function middlewareResponseToRequest(originalRequest: Request, response: Respons
         const newUrl = response.headers.get('x-middleware-rewrite');
 
         if (newUrl) {
-            request = new Request({
-                ...originalRequest,
-                url: newUrl,
-            });
+            request = new Request(newUrl, originalRequest);
         }
     }
 

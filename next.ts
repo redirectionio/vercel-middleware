@@ -18,8 +18,6 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
 
     if (configPreviousMiddleware) {
         previousMiddleware = (req: Request, context: RequestContext) => {
-            const nextRequest = new NextRequest(req);
-
             return configPreviousMiddleware(new NextRequest(req), context as any as NextFetchEvent);
         }
     }

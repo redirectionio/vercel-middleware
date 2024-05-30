@@ -42,8 +42,8 @@ vercel deploy
 
 ## Usage with an existing middleware
 
-You may have an existing middleware in your Vercel project. In this case, you can use the `createMiddleware` function
-which allows to chain existing middleware with redirection.io middleware.
+You may have an existing middleware in your Vercel project. In this case, you can use
+the `createRedirectionIoMiddleware` function which allows to chain existing middleware with redirection.io middleware.
 
 ```typescript
 import {createRedirectionIoMiddleware} from '@redirection.io/vercel-middleware';
