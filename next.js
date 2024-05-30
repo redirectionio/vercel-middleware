@@ -7,12 +7,12 @@ export const createRedirectionIoMiddleware = (config) => {
     const configNextMiddleware = config.nextMiddleware;
     if (configPreviousMiddleware) {
         previousMiddleware = (req, context) => {
-            return configPreviousMiddleware(new NextRequest(req), context);
+            return configPreviousMiddleware(new NextRequest(req.url, req), context);
         };
     }
     if (configNextMiddleware) {
         nextMiddleware = (req, context) => {
-            return configNextMiddleware(new NextRequest(req), context);
+            return configNextMiddleware(new NextRequest(req.url, req), context);
         };
     }
     const edgeMiddleware = createEdgeMiddleware({

@@ -18,13 +18,13 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
 
     if (configPreviousMiddleware) {
         previousMiddleware = (req: Request, context: RequestContext) => {
-            return configPreviousMiddleware(new NextRequest(req), context as any as NextFetchEvent);
+            return configPreviousMiddleware(new NextRequest(req.url, req), context as any as NextFetchEvent);
         }
     }
 
     if (configNextMiddleware) {
         nextMiddleware = (req: Request, context: RequestContext) => {
-            return configNextMiddleware(new NextRequest(req), context as any as NextFetchEvent);
+            return configNextMiddleware(new NextRequest(req.url, req), context as any as NextFetchEvent);
         }
     }
 
