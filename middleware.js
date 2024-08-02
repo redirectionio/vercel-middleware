@@ -20,7 +20,7 @@ export const createRedirectionIoMiddleware = (config) => {
             }
             middlewareRequest = middlewareResponseToRequest(middlewareRequest, response, body);
         }
-        return handler(middlewareRequest, context, async (request) => {
+        return handler(middlewareRequest, context, async (request, useFetch) => {
             let response = null;
             if (config.nextMiddleware) {
                 response = await config.nextMiddleware(request, context);
@@ -28,6 +28,9 @@ export const createRedirectionIoMiddleware = (config) => {
                     return response;
                 }
                 request = middlewareResponseToRequest(request, response, body);
+            }
+            if (!useFetch) {
+                return response ?? next();
             }
             const fetchResponse = await fetch(request);
             const backendResponse = new Response(fetchResponse.body, fetchResponse);
@@ -47,7 +50,7 @@ export default defaultMiddleware;
 async function handler(request, context, fetchResponse) {
     if (!REDIRECTIONIO_TOKEN) {
         console.warn('No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.');
-        return next();
+        return fetchResponse(request, false);
     }
     // Avoid infinite loop
     if (request.headers.get('x-redirectionio-middleware') === 'true') {
@@ -60,7 +63,7 @@ async function handler(request, context, fetchResponse) {
     const action = await fetchRedirectionIOAction(redirectionIORequest);
     const [response, backendStatusCode] = await proxy(request, action, (request) => {
         request.headers.set('x-redirectionio-middleware', 'true');
-        return fetchResponse(request);
+        return fetchResponse(request, true);
     });
     const url = new URL(request.url);
     const location = response.headers.get("Location");
@@ -195,7 +198,7 @@ async function proxy(request, action, fetchResponse) {
         const statusCodeBeforeResponse = action.get_status_code(0);
         let response;
         if (statusCodeBeforeResponse === 0) {
-            response = await fetchResponse(request);
+            response = await fetchResponse(request, true);
         }
         else {
             response = new Response('', {
@@ -242,7 +245,7 @@ async function proxy(request, action, fetchResponse) {
     }
     catch (err) {
         console.error(err);
-        const response = await fetchResponse(request);
+        const response = await fetchResponse(request, true);
         return [response, response.status];
     }
 }
