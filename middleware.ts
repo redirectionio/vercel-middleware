@@ -19,7 +19,12 @@ type CreateMiddlewareConfig = {
 
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
     return async (request, context) => {
-        const body = request.body ? await request.blob() : null;
+        // Avoid infinite loop
+        if (request.headers.get('x-redirectionio-middleware') === 'true') {
+            return next();
+        }
+
+        const body = request.body ? await request.arrayBuffer() : null;
 
         let middlewareRequest = new Request(request.url, {
             method: request.method,
@@ -54,7 +59,9 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
                 return response ?? next();
             }
 
-            const fetchResponse = await fetch(request);
+            const fetchResponse = await fetch(request, {
+                redirect: 'manual',
+            });
             const backendResponse = new Response(fetchResponse.body, fetchResponse);
 
             if (response) {
@@ -79,11 +86,6 @@ async function handler(request: Request, context: RequestContext, fetchResponse:
         console.warn('No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.');
 
         return fetchResponse(request, false);
-    }
-
-    // Avoid infinite loop
-    if (request.headers.get('x-redirectionio-middleware') === 'true') {
-        return next();
     }
 
     const startTimestamp = Date.now();
@@ -199,7 +201,7 @@ function createRedirectionIORequest(request: Request, ip?: string) {
     return redirectionioRequest;
 }
 
-function middlewareResponseToRequest(originalRequest: Request, response: Response, body: Blob | null): Request {
+function middlewareResponseToRequest(originalRequest: Request, response: Response, body: ArrayBuffer | null): Request {
     let request = originalRequest;
 
     if (response.headers.has('x-middleware-rewrite')) {

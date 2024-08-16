@@ -7,7 +7,11 @@ const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_R
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
 export const createRedirectionIoMiddleware = (config) => {
     return async (request, context) => {
-        const body = request.body ? await request.blob() : null;
+        // Avoid infinite loop
+        if (request.headers.get('x-redirectionio-middleware') === 'true') {
+            return next();
+        }
+        const body = request.body ? await request.arrayBuffer() : null;
         let middlewareRequest = new Request(request.url, {
             method: request.method,
             headers: request.headers,
@@ -32,7 +36,9 @@ export const createRedirectionIoMiddleware = (config) => {
             if (!useFetch) {
                 return response ?? next();
             }
-            const fetchResponse = await fetch(request);
+            const fetchResponse = await fetch(request, {
+                redirect: 'manual',
+            });
             const backendResponse = new Response(fetchResponse.body, fetchResponse);
             if (response) {
                 response.headers.forEach((value, key) => {
@@ -51,10 +57,6 @@ async function handler(request, context, fetchResponse) {
     if (!REDIRECTIONIO_TOKEN) {
         console.warn('No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.');
         return fetchResponse(request, false);
-    }
-    // Avoid infinite loop
-    if (request.headers.get('x-redirectionio-middleware') === 'true') {
-        return next();
     }
     const startTimestamp = Date.now();
     await redirectionio.init();
