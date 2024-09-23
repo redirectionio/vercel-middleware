@@ -1,4 +1,5 @@
-import {ipAddress, next, RequestContext} from "@vercel/edge";
+import {next, RequestContext} from "@vercel/edge";
+import {ipAddress} from '@vercel/functions';
 import * as redirectionio from '@redirection.io/redirectionio';
 import type {NextRequest} from "next/server";
 

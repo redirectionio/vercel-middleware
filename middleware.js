@@ -1,4 +1,5 @@
-import { ipAddress, next } from "@vercel/edge";
+import { next } from "@vercel/edge";
+import { ipAddress } from '@vercel/functions';
 import * as redirectionio from '@redirection.io/redirectionio';
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || '';
 const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || 'redirection-io-vercel-middleware';
