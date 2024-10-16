@@ -21,7 +21,7 @@ type CreateMiddlewareConfig = {
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
     return async (request, context) => {
         // Avoid infinite loop
-        if (request.headers.get('x-redirectionio-middleware') === 'true') {
+        if (request.headers.get('x-redirectionio-middleware') === 'true' || request.headers.get('User-Agent') === 'Vercel Edge Functions') {
             return next();
         }
 
@@ -63,6 +63,7 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
             const fetchResponse = await fetch(request, {
                 redirect: 'manual',
             });
+
             const backendResponse = new Response(fetchResponse.body, fetchResponse);
 
             if (response) {

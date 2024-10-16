@@ -9,7 +9,7 @@ const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(proce
 export const createRedirectionIoMiddleware = (config) => {
     return async (request, context) => {
         // Avoid infinite loop
-        if (request.headers.get('x-redirectionio-middleware') === 'true') {
+        if (request.headers.get('x-redirectionio-middleware') === 'true' || request.headers.get('User-Agent') === 'Vercel Edge Functions') {
             return next();
         }
         const body = request.body ? await request.arrayBuffer() : null;
