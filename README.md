@@ -1,6 +1,6 @@
 # Vercel Edge Middleware for redirection.io
 
-This package allow to use redirection.io within
+This package allows to use redirection.io within
 a [Vercel Edge Middleware](https://vercel.com/docs/functions/edge-middleware).
 
 Look at our documentation about our Vercel Edge Middleware integration
@@ -83,4 +83,13 @@ const middleware = createRedirectionIoMiddleware({
 });
 
 export default middleware;
+```
+
+
+### Development
+
+Build
+
+```bash
+yarn run tsc
 ```

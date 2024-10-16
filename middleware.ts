@@ -1,11 +1,11 @@
-import {next, RequestContext} from "@vercel/edge";
-import {ipAddress} from '@vercel/functions';
+import { next, RequestContext } from "@vercel/edge";
+import { ipAddress } from '@vercel/functions';
 import * as redirectionio from '@redirection.io/redirectionio';
-import type {NextRequest} from "next/server";
+import type { NextRequest } from "next/server";
 
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || '';
 const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || 'redirection-io-vercel-middleware';
-const REDIRECTIONIO_VERSION = 'redirection-io-vercel-middleware/0.3.5';
+const REDIRECTIONIO_VERSION = 'redirection-io-vercel-middleware/0.3.9';
 const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === 'true' : false;
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
 
@@ -62,6 +62,7 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
 
             const fetchResponse = await fetch(request, {
                 redirect: 'manual',
+                cache: 'no-store',
             });
 
             const backendResponse = new Response(fetchResponse.body, fetchResponse);
@@ -245,6 +246,7 @@ async function fetchRedirectionIOAction(redirectionIORequest: redirectionio.Requ
                     'User-Agent': 'vercel-edge-middleware/' + REDIRECTIONIO_VERSION,
                     'x-redirectionio-instance-name': REDIRECTIONIO_INSTANCE_NAME,
                 },
+                cache: 'no-store',
             }),
             new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Timeout')), REDIRECTIONIO_TIMEOUT)
@@ -414,6 +416,7 @@ async function log(response: Response, backendStatusCode: number, redirectionioR
                     'User-Agent': 'vercel-edge-middleware/' + REDIRECTIONIO_VERSION,
                     'x-redirectionio-instance-name': REDIRECTIONIO_INSTANCE_NAME,
                 },
+                cache: 'no-store',
             }
         );
     } catch (err) {
