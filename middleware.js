@@ -1,15 +1,20 @@
 import { next } from "@vercel/edge";
-import { ipAddress } from '@vercel/functions';
-import * as redirectionio from '@redirection.io/redirectionio';
-const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || '';
-const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || 'redirection-io-vercel-middleware';
-const REDIRECTIONIO_VERSION = 'redirection-io-vercel-middleware/0.3.9';
-const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === 'true' : false;
+import { ipAddress } from "@vercel/functions";
+import * as redirectionio from "@redirection.io/redirectionio";
+const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || "";
+const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || "redirection-io-vercel-middleware";
+const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.10";
+const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS
+    ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === "true"
+    : false;
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
 export const createRedirectionIoMiddleware = (config) => {
     return async (request, context) => {
         // Avoid infinite loop
-        if (request.headers.get('x-redirectionio-middleware') === 'true' || request.headers.get('User-Agent') === 'Vercel Edge Functions') {
+        if (
+            request.headers.get("x-redirectionio-middleware") === "true" ||
+            request.headers.get("User-Agent") === "Vercel Edge Functions"
+        ) {
             return next();
         }
         const body = request.body ? await request.arrayBuffer() : null;
@@ -38,13 +43,13 @@ export const createRedirectionIoMiddleware = (config) => {
                 return response ?? next();
             }
             const fetchResponse = await fetch(request, {
-                redirect: 'manual',
-                cache: 'no-store',
+                redirect: "manual",
+                cache: "no-store",
             });
             const backendResponse = new Response(fetchResponse.body, fetchResponse);
             if (response) {
                 response.headers.forEach((value, key) => {
-                    if (!key.startsWith('x-middleware-')) {
+                    if (!key.startsWith("x-middleware-")) {
                         backendResponse.headers.set(key, value);
                     }
                 });
@@ -57,7 +62,7 @@ const defaultMiddleware = createRedirectionIoMiddleware({});
 export default defaultMiddleware;
 async function handler(request, context, fetchResponse) {
     if (!REDIRECTIONIO_TOKEN) {
-        console.warn('No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.');
+        console.warn("No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.");
         return fetchResponse(request, false);
     }
     const startTimestamp = Date.now();
@@ -66,27 +71,29 @@ async function handler(request, context, fetchResponse) {
     const redirectionIORequest = createRedirectionIORequest(request, ip);
     const action = await fetchRedirectionIOAction(redirectionIORequest);
     const [response, backendStatusCode] = await proxy(request, action, (request) => {
-        request.headers.set('x-redirectionio-middleware', 'true');
+        request.headers.set("x-redirectionio-middleware", "true");
         return fetchResponse(request, true);
     });
     const url = new URL(request.url);
     const location = response.headers.get("Location");
-    if (location && location.startsWith('/')) {
+    if (location && location.startsWith("/")) {
         response.headers.set("Location", url.origin + location);
     }
-    context.waitUntil(async function () {
-        await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
-    }());
+    context.waitUntil(
+        (async function () {
+            await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
+        })(),
+    );
     return response;
 }
 function splitSetCookies(cookiesString) {
-    var cookiesStrings = [];
-    var pos = 0;
-    var start;
-    var ch;
-    var lastComma;
-    var nextStart;
-    var cookiesSeparatorFound;
+    const cookiesStrings = [];
+    let pos = 0;
+    let start;
+    let ch;
+    let lastComma;
+    let nextStart;
+    let cookiesSeparatorFound;
     function skipWhitespace() {
         while (pos < cookiesString.length && /\s/.test(cookiesString.charAt(pos))) {
             pos += 1;
@@ -119,14 +126,12 @@ function splitSetCookies(cookiesString) {
                     pos = nextStart;
                     cookiesStrings.push(cookiesString.substring(start, lastComma));
                     start = pos;
-                }
-                else {
+                } else {
                     // in param ',' or param separator ';',
                     // we continue from that comma
                     pos = lastComma + 1;
                 }
-            }
-            else {
+            } else {
                 pos += 1;
             }
         }
@@ -138,7 +143,12 @@ function splitSetCookies(cookiesString) {
 }
 function createRedirectionIORequest(request, ip) {
     const urlObject = new URL(request.url);
-    const redirectionioRequest = new redirectionio.Request(urlObject.pathname + urlObject.search, urlObject.host, urlObject.protocol.replace(":", ""), request.method);
+    const redirectionioRequest = new redirectionio.Request(
+        urlObject.pathname + urlObject.search,
+        urlObject.host,
+        urlObject.protocol.replace(":", ""),
+        request.method,
+    );
     request.headers.forEach((value, key) => {
         redirectionioRequest.add_header(key, value);
     });
@@ -149,8 +159,8 @@ function createRedirectionIORequest(request, ip) {
 }
 function middlewareResponseToRequest(originalRequest, response, body) {
     let request = originalRequest;
-    if (response.headers.has('x-middleware-rewrite')) {
-        const newUrl = response.headers.get('x-middleware-rewrite');
+    if (response.headers.has("x-middleware-rewrite")) {
+        const newUrl = response.headers.get("x-middleware-rewrite");
         if (newUrl) {
             request = new Request(newUrl, {
                 method: request.method,
@@ -159,11 +169,11 @@ function middlewareResponseToRequest(originalRequest, response, body) {
             });
         }
     }
-    if (response.headers.has('x-middleware-override-headers')) {
-        const headersToOverride = response.headers.get('x-middleware-override-headers');
+    if (response.headers.has("x-middleware-override-headers")) {
+        const headersToOverride = response.headers.get("x-middleware-override-headers");
         if (headersToOverride) {
-            headersToOverride.split(',').forEach(header => {
-                const value = response.headers.get('x-middleware-request-' + header);
+            headersToOverride.split(",").forEach((header) => {
+                const value = response.headers.get("x-middleware-request-" + header);
                 if (value) {
                     request.headers.set(header, value);
                 }
@@ -175,24 +185,23 @@ function middlewareResponseToRequest(originalRequest, response, body) {
 async function fetchRedirectionIOAction(redirectionIORequest) {
     try {
         const response = await Promise.race([
-            fetch('https://agent.redirection.io/' + REDIRECTIONIO_TOKEN + '/action', {
-                method: 'POST',
+            fetch("https://agent.redirection.io/" + REDIRECTIONIO_TOKEN + "/action", {
+                method: "POST",
                 body: redirectionIORequest.serialize().toString(),
                 headers: {
-                    'User-Agent': 'vercel-edge-middleware/' + REDIRECTIONIO_VERSION,
-                    'x-redirectionio-instance-name': REDIRECTIONIO_INSTANCE_NAME,
+                    "User-Agent": "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
+                    "x-redirectionio-instance-name": REDIRECTIONIO_INSTANCE_NAME,
                 },
-                cache: 'no-store',
+                cache: "no-store",
             }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), REDIRECTIONIO_TIMEOUT)),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), REDIRECTIONIO_TIMEOUT)),
         ]);
         const actionStr = await response.text();
         if (actionStr === "") {
             return redirectionio.Action.empty();
         }
         return new redirectionio.Action(actionStr);
-    }
-    catch (e) {
+    } catch (e) {
         console.error(e);
         return redirectionio.Action.empty();
     }
@@ -204,9 +213,8 @@ async function proxy(request, action, fetchResponse) {
         let response;
         if (statusCodeBeforeResponse === 0) {
             response = await fetchResponse(request, true);
-        }
-        else {
-            response = new Response('', {
+        } else {
+            response = new Response("", {
                 status: Number(statusCodeBeforeResponse),
             });
         }
@@ -223,8 +231,7 @@ async function proxy(request, action, fetchResponse) {
                 for (const cookie of cookies) {
                     headerMap.add_header("set-cookie", cookie);
                 }
-            }
-            else {
+            } else {
                 headerMap.add_header(key, value);
             }
         });
@@ -247,16 +254,15 @@ async function proxy(request, action, fetchResponse) {
         const { readable, writable } = new TransformStream();
         createBodyFilter(response.body, writable, bodyFilter);
         return [new Response(readable, response), backendStatusCode];
-    }
-    catch (err) {
+    } catch (err) {
         console.error(err);
         const response = await fetchResponse(request, true);
         return [response, response.status];
     }
 }
 async function createBodyFilter(readable, writable, bodyFilter) {
-    let writer = writable.getWriter();
-    let reader = readable?.getReader();
+    const writer = writable.getWriter();
+    const reader = readable?.getReader();
     if (!reader) {
         const filteredData = bodyFilter.filter(new Uint8Array());
         if (filteredData) {
@@ -295,18 +301,25 @@ async function log(response, backendStatusCode, redirectionioRequest, startTimes
         return;
     }
     try {
-        const logAsJson = redirectionio.create_log_in_json(redirectionioRequest, response.status, responseHeaderMap, action, 'vercel-edge-middleware/' + REDIRECTIONIO_VERSION, BigInt(startTimestamp), clientIP ?? '');
-        return await fetch('https://agent.redirection.io/' + REDIRECTIONIO_TOKEN + '/log', {
-            method: 'POST',
+        const logAsJson = redirectionio.create_log_in_json(
+            redirectionioRequest,
+            response.status,
+            responseHeaderMap,
+            action,
+            "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
+            BigInt(startTimestamp),
+            clientIP ?? "",
+        );
+        return await fetch("https://agent.redirection.io/" + REDIRECTIONIO_TOKEN + "/log", {
+            method: "POST",
             body: logAsJson,
             headers: {
-                'User-Agent': 'vercel-edge-middleware/' + REDIRECTIONIO_VERSION,
-                'x-redirectionio-instance-name': REDIRECTIONIO_INSTANCE_NAME,
+                "User-Agent": "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
+                "x-redirectionio-instance-name": REDIRECTIONIO_INSTANCE_NAME,
             },
-            cache: 'no-store',
+            cache: "no-store",
         });
-    }
-    catch (err) {
+    } catch (err) {
         console.error(err);
     }
 }

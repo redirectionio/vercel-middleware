@@ -1,6 +1,6 @@
 {
     "name": "@redirection.io/vercel-middleware",
-    "version": "0.3.9",
+    "version": "0.3.10",
     "description": "Vercel Edge Middleware for redirection.io",
     "main": "middleware.js",
     "license": "MIT",
@@ -19,6 +19,7 @@
     },
     "devDependencies": {
         "next": "^14.2.13",
+        "prettier": "3.3.3",
         "typescript": "^5.4.5"
     },
     "peerDependencies": {

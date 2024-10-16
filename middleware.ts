@@ -1,12 +1,14 @@
 import { next, RequestContext } from "@vercel/edge";
-import { ipAddress } from '@vercel/functions';
-import * as redirectionio from '@redirection.io/redirectionio';
+import { ipAddress } from "@vercel/functions";
+import * as redirectionio from "@redirection.io/redirectionio";
 import type { NextRequest } from "next/server";
 
-const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || '';
-const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || 'redirection-io-vercel-middleware';
-const REDIRECTIONIO_VERSION = 'redirection-io-vercel-middleware/0.3.9';
-const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === 'true' : false;
+const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || "";
+const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || "redirection-io-vercel-middleware";
+const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.10";
+const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS
+    ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === "true"
+    : false;
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
 
 type Middleware = (request: Request | NextRequest, context: RequestContext) => Response | Promise<Response>;
@@ -16,12 +18,15 @@ type FetchResponse = (request: Request, useFetch: boolean) => Promise<Response>;
 type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
-}
+};
 
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
     return async (request, context) => {
         // Avoid infinite loop
-        if (request.headers.get('x-redirectionio-middleware') === 'true' || request.headers.get('User-Agent') === 'Vercel Edge Functions') {
+        if (
+            request.headers.get("x-redirectionio-middleware") === "true" ||
+            request.headers.get("User-Agent") === "Vercel Edge Functions"
+        ) {
             return next();
         }
 
@@ -61,15 +66,15 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
             }
 
             const fetchResponse = await fetch(request, {
-                redirect: 'manual',
-                cache: 'no-store',
+                redirect: "manual",
+                cache: "no-store",
             });
 
             const backendResponse = new Response(fetchResponse.body, fetchResponse);
 
             if (response) {
                 response.headers.forEach((value, key) => {
-                    if (!key.startsWith('x-middleware-')) {
+                    if (!key.startsWith("x-middleware-")) {
                         backendResponse.headers.set(key, value);
                     }
                 });
@@ -77,8 +82,8 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
 
             return backendResponse;
         });
-    }
-}
+    };
+};
 
 const defaultMiddleware = createRedirectionIoMiddleware({});
 
@@ -86,7 +91,7 @@ export default defaultMiddleware;
 
 async function handler(request: Request, context: RequestContext, fetchResponse: FetchResponse): Promise<Response> {
     if (!REDIRECTIONIO_TOKEN) {
-        console.warn('No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.');
+        console.warn("No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.");
 
         return fetchResponse(request, false);
     }
@@ -99,7 +104,7 @@ async function handler(request: Request, context: RequestContext, fetchResponse:
     const redirectionIORequest = createRedirectionIORequest(request, ip);
     const action = await fetchRedirectionIOAction(redirectionIORequest);
     const [response, backendStatusCode] = await proxy(request, action, (request) => {
-        request.headers.set('x-redirectionio-middleware', 'true');
+        request.headers.set("x-redirectionio-middleware", "true");
 
         return fetchResponse(request, true);
     });
@@ -107,25 +112,27 @@ async function handler(request: Request, context: RequestContext, fetchResponse:
     const url = new URL(request.url);
     const location = response.headers.get("Location");
 
-    if (location && location.startsWith('/')) {
+    if (location && location.startsWith("/")) {
         response.headers.set("Location", url.origin + location);
     }
 
-    context.waitUntil(async function () {
-        await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
-    }());
+    context.waitUntil(
+        (async function () {
+            await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
+        })(),
+    );
 
     return response;
 }
 
 function splitSetCookies(cookiesString: string) {
-    var cookiesStrings = [];
-    var pos = 0;
-    var start;
-    var ch;
-    var lastComma;
-    var nextStart;
-    var cookiesSeparatorFound;
+    const cookiesStrings = [];
+    let pos = 0;
+    let start;
+    let ch;
+    let lastComma;
+    let nextStart;
+    let cookiesSeparatorFound;
 
     function skipWhitespace() {
         while (pos < cookiesString.length && /\s/.test(cookiesString.charAt(pos))) {
@@ -190,7 +197,7 @@ function createRedirectionIORequest(request: Request, ip?: string) {
         urlObject.pathname + urlObject.search,
         urlObject.host,
         urlObject.protocol.replace(":", ""),
-        request.method
+        request.method,
     );
 
     request.headers.forEach((value, key) => {
@@ -207,8 +214,8 @@ function createRedirectionIORequest(request: Request, ip?: string) {
 function middlewareResponseToRequest(originalRequest: Request, response: Response, body: ArrayBuffer | null): Request {
     let request = originalRequest;
 
-    if (response.headers.has('x-middleware-rewrite')) {
-        const newUrl = response.headers.get('x-middleware-rewrite');
+    if (response.headers.has("x-middleware-rewrite")) {
+        const newUrl = response.headers.get("x-middleware-rewrite");
 
         if (newUrl) {
             request = new Request(newUrl, {
@@ -219,12 +226,12 @@ function middlewareResponseToRequest(originalRequest: Request, response: Respons
         }
     }
 
-    if (response.headers.has('x-middleware-override-headers')) {
-        const headersToOverride = response.headers.get('x-middleware-override-headers');
+    if (response.headers.has("x-middleware-override-headers")) {
+        const headersToOverride = response.headers.get("x-middleware-override-headers");
 
         if (headersToOverride) {
-            headersToOverride.split(',').forEach(header => {
-                const value = response.headers.get('x-middleware-request-' + header);
+            headersToOverride.split(",").forEach((header) => {
+                const value = response.headers.get("x-middleware-request-" + header);
 
                 if (value) {
                     request.headers.set(header, value);
@@ -238,20 +245,18 @@ function middlewareResponseToRequest(originalRequest: Request, response: Respons
 
 async function fetchRedirectionIOAction(redirectionIORequest: redirectionio.Request) {
     try {
-        const response = await Promise.race([
-            fetch('https://agent.redirection.io/' + REDIRECTIONIO_TOKEN + '/action', {
-                method: 'POST',
+        const response = (await Promise.race([
+            fetch("https://agent.redirection.io/" + REDIRECTIONIO_TOKEN + "/action", {
+                method: "POST",
                 body: redirectionIORequest.serialize().toString(),
                 headers: {
-                    'User-Agent': 'vercel-edge-middleware/' + REDIRECTIONIO_VERSION,
-                    'x-redirectionio-instance-name': REDIRECTIONIO_INSTANCE_NAME,
+                    "User-Agent": "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
+                    "x-redirectionio-instance-name": REDIRECTIONIO_INSTANCE_NAME,
                 },
-                cache: 'no-store',
+                cache: "no-store",
             }),
-            new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Timeout')), REDIRECTIONIO_TIMEOUT)
-            ),
-        ]) as Response;
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), REDIRECTIONIO_TIMEOUT)),
+        ])) as Response;
 
         const actionStr = await response.text();
 
@@ -268,7 +273,11 @@ async function fetchRedirectionIOAction(redirectionIORequest: redirectionio.Requ
 }
 
 /* Redirection.io logic */
-async function proxy(request: Request, action: redirectionio.Action, fetchResponse: FetchResponse): Promise<[Response, number]> {
+async function proxy(
+    request: Request,
+    action: redirectionio.Action,
+    fetchResponse: FetchResponse,
+): Promise<[Response, number]> {
     try {
         const statusCodeBeforeResponse = action.get_status_code(0);
 
@@ -277,7 +286,7 @@ async function proxy(request: Request, action: redirectionio.Action, fetchRespon
         if (statusCodeBeforeResponse === 0) {
             response = await fetchResponse(request, true);
         } else {
-            response = new Response('', {
+            response = new Response("", {
                 status: Number(statusCodeBeforeResponse),
             });
         }
@@ -325,7 +334,7 @@ async function proxy(request: Request, action: redirectionio.Action, fetchRespon
             return [response, response.status];
         }
 
-        const {readable, writable} = new TransformStream();
+        const { readable, writable } = new TransformStream();
 
         createBodyFilter(response.body, writable, bodyFilter);
 
@@ -338,9 +347,13 @@ async function proxy(request: Request, action: redirectionio.Action, fetchRespon
     }
 }
 
-async function createBodyFilter(readable: ReadableStream<Uint8Array> | null, writable: WritableStream, bodyFilter: redirectionio.BodyFilter) {
-    let writer = writable.getWriter();
-    let reader = readable?.getReader();
+async function createBodyFilter(
+    readable: ReadableStream<Uint8Array> | null,
+    writable: WritableStream,
+    bodyFilter: redirectionio.BodyFilter,
+) {
+    const writer = writable.getWriter();
+    const reader = readable?.getReader();
 
     if (!reader) {
         const filteredData = bodyFilter.filter(new Uint8Array());
@@ -381,7 +394,14 @@ async function createBodyFilter(readable: ReadableStream<Uint8Array> | null, wri
     await writer.close();
 }
 
-async function log(response: Response, backendStatusCode: number, redirectionioRequest: redirectionio.Request, startTimestamp: number, action: redirectionio.Action, clientIP: string | undefined) {
+async function log(
+    response: Response,
+    backendStatusCode: number,
+    redirectionioRequest: redirectionio.Request,
+    startTimestamp: number,
+    action: redirectionio.Action,
+    clientIP: string | undefined,
+) {
     if (response === null) {
         return;
     }
@@ -402,23 +422,20 @@ async function log(response: Response, backendStatusCode: number, redirectionioR
             response.status,
             responseHeaderMap,
             action,
-            'vercel-edge-middleware/' + REDIRECTIONIO_VERSION,
+            "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
             BigInt(startTimestamp),
-            clientIP ?? '',
+            clientIP ?? "",
         );
 
-        return await fetch(
-            'https://agent.redirection.io/' + REDIRECTIONIO_TOKEN + '/log',
-            {
-                method: 'POST',
-                body: logAsJson,
-                headers: {
-                    'User-Agent': 'vercel-edge-middleware/' + REDIRECTIONIO_VERSION,
-                    'x-redirectionio-instance-name': REDIRECTIONIO_INSTANCE_NAME,
-                },
-                cache: 'no-store',
-            }
-        );
+        return await fetch("https://agent.redirection.io/" + REDIRECTIONIO_TOKEN + "/log", {
+            method: "POST",
+            body: logAsJson,
+            headers: {
+                "User-Agent": "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
+                "x-redirectionio-instance-name": REDIRECTIONIO_INSTANCE_NAME,
+            },
+            cache: "no-store",
+        });
     } catch (err) {
         console.error(err);
     }

@@ -21,15 +21,13 @@ Create a `middleware.ts` file in the root of your Vercel application (at the sam
 possibly in a `src` folder if your project uses one) with the following content:
 
 ```typescript
-import redirectionioMiddleware from '@redirection.io/vercel-middleware';
+import redirectionioMiddleware from "@redirection.io/vercel-middleware";
 
 export default redirectionioMiddleware;
 
 export const config = {
-    unstable_allowDynamic: [
-        '/node_modules/@redirection.io/**',
-    ],
-}
+    unstable_allowDynamic: ["/node_modules/@redirection.io/**"],
+};
 ```
 
 Set the `REDIRECTIONIO_TOKEN` environment variable in your vercel project settings.
@@ -46,13 +44,13 @@ You may have an existing middleware in your Vercel project. In this case, you ca
 the `createRedirectionIoMiddleware` function which allows to chain existing middleware with redirection.io middleware.
 
 ```typescript
-import {createRedirectionIoMiddleware} from '@redirection.io/vercel-middleware';
+import { createRedirectionIoMiddleware } from "@redirection.io/vercel-middleware";
 
 const myExistingMiddleware = (request: Request) => {
     // Your existing middleware logic
 
     return next();
-}
+};
 
 const middleware = createRedirectionIoMiddleware({
     previousMiddleware: myExistingMiddleware, // In this case your middleware is executed before redirection.io middleware
@@ -68,14 +66,14 @@ If you are using next.js middlewares, you can use the `createRedirectionIoMiddle
 from `@redirection.io/vercel-middleware/next` which is compatible with `NextRequest` type.
 
 ```typescript
-import {createRedirectionIoMiddleware} from '@redirection.io/vercel-middleware/next';
-import {NextRequest} from "next/server";
+import { createRedirectionIoMiddleware } from "@redirection.io/vercel-middleware/next";
+import { NextRequest } from "next/server";
 
 const myExistingMiddleware = (request: NextRequest) => {
     // Your existing middleware logic
 
     return next();
-}
+};
 
 const middleware = createRedirectionIoMiddleware({
     previousMiddleware: myExistingMiddleware, // In this case your middleware is executed before redirection.io middleware
@@ -84,7 +82,6 @@ const middleware = createRedirectionIoMiddleware({
 
 export default middleware;
 ```
-
 
 ### Development
 
