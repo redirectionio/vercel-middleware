@@ -317,7 +317,11 @@ async function proxy(
         const newHeaders = new Headers();
 
         for (let i = 0; i < newHeaderMap.len(); i++) {
-            newHeaders.append(newHeaderMap.get_header_name(i), newHeaderMap.get_header_value(i));
+            const headerName = newHeaderMap.get_header_name(i);
+
+            if (headerName && headerName.length > 0) {
+                newHeaders.append(headerName, newHeaderMap.get_header_value(i));
+            }
         }
 
         response = new Response(response.body, {

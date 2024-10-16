@@ -11,10 +11,8 @@ const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(proce
 export const createRedirectionIoMiddleware = (config) => {
     return async (request, context) => {
         // Avoid infinite loop
-        if (
-            request.headers.get("x-redirectionio-middleware") === "true" ||
-            request.headers.get("User-Agent") === "Vercel Edge Functions"
-        ) {
+        if (request.headers.get("x-redirectionio-middleware") === "true" ||
+            request.headers.get("User-Agent") === "Vercel Edge Functions") {
             return next();
         }
         const body = request.body ? await request.arrayBuffer() : null;
@@ -79,11 +77,9 @@ async function handler(request, context, fetchResponse) {
     if (location && location.startsWith("/")) {
         response.headers.set("Location", url.origin + location);
     }
-    context.waitUntil(
-        (async function () {
-            await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
-        })(),
-    );
+    context.waitUntil((async function () {
+        await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
+    })());
     return response;
 }
 function splitSetCookies(cookiesString) {
@@ -126,12 +122,14 @@ function splitSetCookies(cookiesString) {
                     pos = nextStart;
                     cookiesStrings.push(cookiesString.substring(start, lastComma));
                     start = pos;
-                } else {
+                }
+                else {
                     // in param ',' or param separator ';',
                     // we continue from that comma
                     pos = lastComma + 1;
                 }
-            } else {
+            }
+            else {
                 pos += 1;
             }
         }
@@ -143,12 +141,7 @@ function splitSetCookies(cookiesString) {
 }
 function createRedirectionIORequest(request, ip) {
     const urlObject = new URL(request.url);
-    const redirectionioRequest = new redirectionio.Request(
-        urlObject.pathname + urlObject.search,
-        urlObject.host,
-        urlObject.protocol.replace(":", ""),
-        request.method,
-    );
+    const redirectionioRequest = new redirectionio.Request(urlObject.pathname + urlObject.search, urlObject.host, urlObject.protocol.replace(":", ""), request.method);
     request.headers.forEach((value, key) => {
         redirectionioRequest.add_header(key, value);
     });
@@ -184,7 +177,7 @@ function middlewareResponseToRequest(originalRequest, response, body) {
 }
 async function fetchRedirectionIOAction(redirectionIORequest) {
     try {
-        const response = await Promise.race([
+        const response = (await Promise.race([
             fetch("https://agent.redirection.io/" + REDIRECTIONIO_TOKEN + "/action", {
                 method: "POST",
                 body: redirectionIORequest.serialize().toString(),
@@ -195,13 +188,14 @@ async function fetchRedirectionIOAction(redirectionIORequest) {
                 cache: "no-store",
             }),
             new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), REDIRECTIONIO_TIMEOUT)),
-        ]);
+        ]));
         const actionStr = await response.text();
         if (actionStr === "") {
             return redirectionio.Action.empty();
         }
         return new redirectionio.Action(actionStr);
-    } catch (e) {
+    }
+    catch (e) {
         console.error(e);
         return redirectionio.Action.empty();
     }
@@ -213,7 +207,8 @@ async function proxy(request, action, fetchResponse) {
         let response;
         if (statusCodeBeforeResponse === 0) {
             response = await fetchResponse(request, true);
-        } else {
+        }
+        else {
             response = new Response("", {
                 status: Number(statusCodeBeforeResponse),
             });
@@ -231,14 +226,18 @@ async function proxy(request, action, fetchResponse) {
                 for (const cookie of cookies) {
                     headerMap.add_header("set-cookie", cookie);
                 }
-            } else {
+            }
+            else {
                 headerMap.add_header(key, value);
             }
         });
         const newHeaderMap = action.filter_headers(headerMap, backendStatusCode, REDIRECTIONIO_ADD_HEADER_RULE_IDS);
         const newHeaders = new Headers();
         for (let i = 0; i < newHeaderMap.len(); i++) {
-            newHeaders.append(newHeaderMap.get_header_name(i), newHeaderMap.get_header_value(i));
+            const headerName = newHeaderMap.get_header_name(i);
+            if (headerName && headerName.length > 0) {
+                newHeaders.append(headerName, newHeaderMap.get_header_value(i));
+            }
         }
         response = new Response(response.body, {
             status: status,
@@ -254,7 +253,8 @@ async function proxy(request, action, fetchResponse) {
         const { readable, writable } = new TransformStream();
         createBodyFilter(response.body, writable, bodyFilter);
         return [new Response(readable, response), backendStatusCode];
-    } catch (err) {
+    }
+    catch (err) {
         console.error(err);
         const response = await fetchResponse(request, true);
         return [response, response.status];
@@ -301,15 +301,7 @@ async function log(response, backendStatusCode, redirectionioRequest, startTimes
         return;
     }
     try {
-        const logAsJson = redirectionio.create_log_in_json(
-            redirectionioRequest,
-            response.status,
-            responseHeaderMap,
-            action,
-            "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
-            BigInt(startTimestamp),
-            clientIP ?? "",
-        );
+        const logAsJson = redirectionio.create_log_in_json(redirectionioRequest, response.status, responseHeaderMap, action, "vercel-edge-middleware/" + REDIRECTIONIO_VERSION, BigInt(startTimestamp), clientIP ?? "");
         return await fetch("https://agent.redirection.io/" + REDIRECTIONIO_TOKEN + "/log", {
             method: "POST",
             body: logAsJson,
@@ -319,7 +311,8 @@ async function log(response, backendStatusCode, redirectionioRequest, startTimes
             },
             cache: "no-store",
         });
-    } catch (err) {
+    }
+    catch (err) {
         console.error(err);
     }
 }
