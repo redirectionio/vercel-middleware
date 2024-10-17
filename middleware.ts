@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || "";
 const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || "redirection-io-vercel-middleware";
-const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.10";
+const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.12";
 const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS
     ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === "true"
     : false;
@@ -18,10 +18,17 @@ type FetchResponse = (request: Request, useFetch: boolean) => Promise<Response>;
 type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
+    matcherRegex?: string;
 };
 
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
     return async (request, context) => {
+        const pathname = new URL(request.url).pathname;
+
+        if (config.matcherRegex && !pathname.match(config.matcherRegex)) {
+            return next();
+        }
+
         // Avoid infinite loop
         if (
             request.headers.get("x-redirectionio-middleware") === "true" ||
@@ -85,7 +92,9 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
     };
 };
 
-const defaultMiddleware = createRedirectionIoMiddleware({});
+const defaultMiddleware = createRedirectionIoMiddleware({
+    matcherRegex: "^/((?!api/|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)$",
+});
 
 export default defaultMiddleware;
 
