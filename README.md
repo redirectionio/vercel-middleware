@@ -55,32 +55,50 @@ const myExistingMiddleware = (request: Request) => {
 const middleware = createRedirectionIoMiddleware({
     previousMiddleware: myExistingMiddleware, // In this case your middleware is executed before redirection.io middleware
     nextMiddleware: myExistingMiddleware, // In this case your middleware is executed after redirection.io middleware
+    // Optional: matcher to specify which routes should be ignored by redirection.io middleware
+    // Default: "^/((?!api/|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)$"
+    matcherRegex: "^/((?!api/|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)$",
 });
 
 export default middleware;
 ```
+
+By default, our middleware ignores certain routes even if there's an exported configuration. The ignored routes are:
+
+-   `/api/*` routes
+-   `/next/*` (Next.js internals)
+-   `/static/*` (inside `/public`)
+-   all root files inside /public (e.g. /favicon.ico)
+
+If you want the middleware to handle all routes without any exclusions, you can set the `matcherRegex` option to `null`:
+
+```typescript
+createRedirectionIoMiddleware({ matcherRegex: null });
+```
+
+Here's a summary of the middleware options:
+
+| Option               | Type           | Description                                                                  |
+| -------------------- | -------------- | ---------------------------------------------------------------------------- |
+| `previousMiddleware` | Function       | Middleware to be executed before redirection.io middleware                   |
+| `nextMiddleware`     | Function       | Middleware to be executed after redirection.io middleware                    |
+| `matcherRegex`       | String or null | Regex to specify which routes should be handled by redirection.io middleware |
 
 ### Next.js
 
 If you are using next.js middlewares, you can use the `createRedirectionIoMiddleware` method
 from `@redirection.io/vercel-middleware/next` which is compatible with `NextRequest` type.
 
-```typescript
-import { createRedirectionIoMiddleware } from "@redirection.io/vercel-middleware/next";
-import { NextRequest } from "next/server";
+```diff
+- import { createRedirectionIoMiddleware } from "@redirection.io/vercel-middleware";
++ import { createRedirectionIoMiddleware } from "@redirection.io/vercel-middleware/next";
++ import { NextRequest } from "next/server";
 
-const myExistingMiddleware = (request: NextRequest) => {
-    // Your existing middleware logic
-
+- const myExistingMiddleware = (request: Request) => {
++ const myExistingMiddleware = (request: NextRequest) => {
     return next();
 };
 
-const middleware = createRedirectionIoMiddleware({
-    previousMiddleware: myExistingMiddleware, // In this case your middleware is executed before redirection.io middleware
-    nextMiddleware: myExistingMiddleware, // In this case your middleware is executed after redirection.io middleware
-});
-
-export default middleware;
 ```
 
 ### Development

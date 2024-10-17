@@ -5,11 +5,15 @@ import type { NextRequest } from "next/server";
 
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || "";
 const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || "redirection-io-vercel-middleware";
-const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.10";
+const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.12";
 const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS
     ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === "true"
     : false;
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
+
+const DEFAULT_CONFIG = {
+    matcherRegex: "^/((?!api/|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)$",
+};
 
 type Middleware = (request: Request | NextRequest, context: RequestContext) => Response | Promise<Response>;
 
@@ -18,10 +22,22 @@ type FetchResponse = (request: Request, useFetch: boolean) => Promise<Response>;
 type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
+    matcherRegex?: string | null;
 };
 
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
     return async (request, context) => {
+        const pathname = new URL(request.url).pathname;
+
+        config = {
+            ...DEFAULT_CONFIG,
+            ...config,
+        };
+
+        if (config.matcherRegex && !pathname.match(config.matcherRegex)) {
+            return next();
+        }
+
         // Avoid infinite loop
         if (
             request.headers.get("x-redirectionio-middleware") === "true" ||
