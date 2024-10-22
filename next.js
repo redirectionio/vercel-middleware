@@ -5,6 +5,7 @@ export const createRedirectionIoMiddleware = (config) => {
     let nextMiddleware;
     const configPreviousMiddleware = config.previousMiddleware;
     const configNextMiddleware = config.nextMiddleware;
+    const configMatcherRegex = config.matcherRegex;
     if (configPreviousMiddleware) {
         previousMiddleware = (req, context) => {
             return configPreviousMiddleware(new NextRequest(req.url, req), context);
@@ -18,6 +19,7 @@ export const createRedirectionIoMiddleware = (config) => {
     const edgeMiddleware = createEdgeMiddleware({
         previousMiddleware,
         nextMiddleware,
+        ...(configMatcherRegex ? { matcherRegex: configMatcherRegex } : {}),
     });
     return async (req, context) => {
         const response = await edgeMiddleware(req, context);
