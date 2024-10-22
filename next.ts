@@ -7,6 +7,7 @@ type Middleware = (request: NextRequest, context: NextFetchEvent) => NextRespons
 type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
+    matcherRegex?: string | null;
 };
 
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
@@ -15,6 +16,7 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
 
     const configPreviousMiddleware = config.previousMiddleware;
     const configNextMiddleware = config.nextMiddleware;
+    const configMatcherRegex = config.matcherRegex;
 
     if (configPreviousMiddleware) {
         previousMiddleware = (req: Request, context: RequestContext) => {
@@ -31,6 +33,7 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
     const edgeMiddleware = createEdgeMiddleware({
         previousMiddleware,
         nextMiddleware,
+        ...(configMatcherRegex ? { matcherRegex: configMatcherRegex } : {}),
     });
 
     return async (req: NextRequest, context: NextFetchEvent) => {
