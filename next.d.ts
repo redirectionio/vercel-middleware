@@ -3,6 +3,7 @@ type Middleware = (request: NextRequest, context: NextFetchEvent) => NextRespons
 type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
+    matcherRegex?: string | null;
 };
 export declare const createRedirectionIoMiddleware: (config: CreateMiddlewareConfig) => Middleware;
 export {};
