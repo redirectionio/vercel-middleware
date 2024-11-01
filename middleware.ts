@@ -89,6 +89,10 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
             if (!useFetch) {
                 return response ?? next();
             }
+            // Disable for server-actions and components.
+            if (request.headers.get('Next-Action')?.length || request.headers.get('Accept') === "text/x-component") {
+                return response ?? next();
+            }
 
             const fetchResponse = await fetch(request, {
                 redirect: "manual",
