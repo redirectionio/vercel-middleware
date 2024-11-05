@@ -33,7 +33,7 @@
 
 * Fix creating a new request when using a next js request
 
-## 0.3.0 - Initial release
+## 0.3.0 - 28/05/2024
 
 * Add support for next.js
 
