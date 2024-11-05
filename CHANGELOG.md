@@ -1,7 +1,7 @@
 ## 0.3.12 - 05/10/2024
 
-* It is no recommended to avoid using this middleware on `/api`, `/_next`, `/_static` or `/_vercel` paths to avoid buggy
-  behavior from vercel
+* It is now recommended to avoid using this middleware on `/api`, `/_next`, `/_static` or `/_vercel` paths to avoid
+  buggy behavior from vercel
 * Allow to configure a specific matcher to avoid executing this middleware on same paths, by default this middleware
   will not be executed on `/api`, `/_next`, `/_static` or `/_vercel` paths
 
