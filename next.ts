@@ -8,6 +8,8 @@ type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
     matcherRegex?: string | null;
+    mode?: "full" | "light";
+    logged?: boolean;
 };
 
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
@@ -34,6 +36,8 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
         previousMiddleware,
         nextMiddleware,
         ...(configMatcherRegex ? { matcherRegex: configMatcherRegex } : {}),
+        mode: config.mode ?? "full",
+        logged: config.logged ?? true,
     });
 
     return async (req: NextRequest, context: NextFetchEvent) => {

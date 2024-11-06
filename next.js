@@ -20,6 +20,8 @@ export const createRedirectionIoMiddleware = (config) => {
         previousMiddleware,
         nextMiddleware,
         ...(configMatcherRegex ? { matcherRegex: configMatcherRegex } : {}),
+        mode: config.mode ?? "full",
+        logged: config.logged ?? true,
     });
     return async (req, context) => {
         const response = await edgeMiddleware(req, context);

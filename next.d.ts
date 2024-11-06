@@ -4,6 +4,8 @@ type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
     matcherRegex?: string | null;
+    mode?: "full" | "light";
+    logged?: boolean;
 };
 export declare const createRedirectionIoMiddleware: (config: CreateMiddlewareConfig) => Middleware;
 export {};

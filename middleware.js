@@ -1,6 +1,7 @@
 import { next } from "@vercel/edge";
 import { ipAddress } from "@vercel/functions";
 import * as redirectionio from "@redirection.io/redirectionio";
+import { NextResponse } from "next/server";
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || "";
 const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || "redirection-io-vercel-middleware";
 const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.12";
@@ -10,6 +11,8 @@ const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_R
 const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
 const DEFAULT_CONFIG = {
     matcherRegex: "^/((?!api/|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)$",
+    mode: "full",
+    logged: true,
 };
 export const createRedirectionIoMiddleware = (config) => {
     return async (request, context) => {
@@ -41,11 +44,15 @@ export const createRedirectionIoMiddleware = (config) => {
             }
             middlewareRequest = middlewareResponseToRequest(middlewareRequest, response, body);
         }
-        return handler(middlewareRequest, context, async (request, useFetch) => {
+        return handler(middlewareRequest, context, config, async (request, useFetch) => {
             let response = null;
             if (config.nextMiddleware) {
                 response = await config.nextMiddleware(request, context);
                 if (response.status !== 200) {
+                    return response;
+                }
+                // If light mode, only return the response
+                if (config.mode === "light") {
                     return response;
                 }
                 request = middlewareResponseToRequest(request, response, body);
@@ -71,7 +78,7 @@ export const createRedirectionIoMiddleware = (config) => {
 };
 const defaultMiddleware = createRedirectionIoMiddleware({});
 export default defaultMiddleware;
-async function handler(request, context, fetchResponse) {
+async function handler(request, context, config, fetchResponse) {
     if (!REDIRECTIONIO_TOKEN) {
         console.warn("No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.");
         return fetchResponse(request, false);
@@ -87,14 +94,20 @@ async function handler(request, context, fetchResponse) {
     });
     const url = new URL(request.url);
     const location = response.headers.get("Location");
-    if (location && location.startsWith("/")) {
+    const hasLocation = location && location.startsWith("/");
+    if (hasLocation) {
         response.headers.set("Location", url.origin + location);
     }
-    context.waitUntil(
-        (async function () {
-            await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
-        })(),
-    );
+    if (config.logged) {
+        context.waitUntil(
+            (async function () {
+                await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
+            })(),
+        );
+    }
+    if (config.mode === "light" && hasLocation) {
+        return NextResponse.redirect(url.origin + location, response.status);
+    }
     return response;
 }
 function splitSetCookies(cookiesString) {
