@@ -1,7 +1,7 @@
 import { next, RequestContext } from "@vercel/edge";
 import { ipAddress } from "@vercel/functions";
 import * as redirectionio from "@redirection.io/redirectionio";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || "";
 const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || "redirection-io-vercel-middleware";
@@ -13,7 +13,9 @@ const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(proce
 
 const DEFAULT_CONFIG = {
     matcherRegex: "^/((?!api/|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)$",
-};
+    mode: "full",
+    logged: true,
+} as const;
 
 type Middleware = (request: Request | NextRequest, context: RequestContext) => Response | Promise<Response>;
 
@@ -23,6 +25,8 @@ type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
     matcherRegex?: string | null;
+    mode?: "full" | "light";
+    logged?: boolean;
 };
 
 export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
@@ -64,13 +68,18 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
             middlewareRequest = middlewareResponseToRequest(middlewareRequest, response, body);
         }
 
-        return handler(middlewareRequest, context, async (request, useFetch): Promise<Response> => {
+        return handler(middlewareRequest, context, config, async (request, useFetch): Promise<Response> => {
             let response: Response | null = null;
 
             if (config.nextMiddleware) {
                 response = await config.nextMiddleware(request, context);
 
                 if (response.status !== 200) {
+                    return response;
+                }
+
+                // If light mode, only return the response
+                if (config.mode === "light") {
                     return response;
                 }
 
@@ -105,7 +114,12 @@ const defaultMiddleware = createRedirectionIoMiddleware({});
 
 export default defaultMiddleware;
 
-async function handler(request: Request, context: RequestContext, fetchResponse: FetchResponse): Promise<Response> {
+async function handler(
+    request: Request,
+    context: RequestContext,
+    config: CreateMiddlewareConfig,
+    fetchResponse: FetchResponse,
+): Promise<Response> {
     if (!REDIRECTIONIO_TOKEN) {
         console.warn("No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.");
 
@@ -127,16 +141,23 @@ async function handler(request: Request, context: RequestContext, fetchResponse:
 
     const url = new URL(request.url);
     const location = response.headers.get("Location");
+    const hasLocation = location && location.startsWith("/");
 
-    if (location && location.startsWith("/")) {
+    if (hasLocation) {
         response.headers.set("Location", url.origin + location);
     }
 
-    context.waitUntil(
-        (async function () {
-            await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
-        })(),
-    );
+    if (config.logged) {
+        context.waitUntil(
+            (async function () {
+                await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
+            })(),
+        );
+    }
+
+    if (config.mode === "light" && hasLocation) {
+        return NextResponse.redirect(url.origin + location, response.status);
+    }
 
     return response;
 }
