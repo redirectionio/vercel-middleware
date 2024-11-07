@@ -1,9 +1,9 @@
-## 0.4.0 - Unreleased
+## 0.4.0 - 07/11/2024
 
 -   Add light mode support
 -   [Skip redirectionio for server actions and components](https://github.com/redirectionio/vercel-middleware/pull/8)
 
-## 0.3.12 - 05/10/2024
+## 0.3.12 - 05/11/2024
 
 -   It is now recommended to avoid using this middleware on `/api`, `/_next`, `/_static` or `/_vercel` paths to avoid
     buggy behavior from vercel
