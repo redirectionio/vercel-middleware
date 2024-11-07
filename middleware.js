@@ -1,7 +1,6 @@
 import { next } from "@vercel/edge";
 import { ipAddress } from "@vercel/functions";
 import * as redirectionio from "@redirection.io/redirectionio";
-import { NextResponse } from "next/server";
 const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || "";
 const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || "redirection-io-vercel-middleware";
 const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.12";
@@ -51,20 +50,15 @@ export const createRedirectionIoMiddleware = (config) => {
                 if (response.status !== 200) {
                     return response;
                 }
-                // If light mode, only return the response
-                if (config.mode === "light") {
-                    return response;
-                }
                 request = middlewareResponseToRequest(request, response, body);
             }
             if (!useFetch) {
                 return response ?? next();
             }
             // Disable for server-actions and components.
-            if (request.headers.get('Next-Action')?.length || request.headers.get('Accept') === "text/x-component") {
+            if (request.headers.get("Next-Action")?.length || request.headers.get("Accept") === "text/x-component") {
                 return response ?? next();
             }
-            
             const fetchResponse = await fetch(request, {
                 redirect: "manual",
                 cache: "no-store",
@@ -95,12 +89,13 @@ async function handler(request, context, config, fetchResponse) {
     const action = await fetchRedirectionIOAction(redirectionIORequest);
     const [response, backendStatusCode] = await proxy(request, action, (request) => {
         request.headers.set("x-redirectionio-middleware", "true");
-        return fetchResponse(request, true);
+        // skip fetch if we are in light mode
+        return fetchResponse(request, config.mode === "full");
     });
     const url = new URL(request.url);
     const location = response.headers.get("Location");
-    const hasLocation = location && location.startsWith("/");
-    if (hasLocation) {
+    // Fix relative location header
+    if (location && location.startsWith("/")) {
         response.headers.set("Location", url.origin + location);
     }
     if (config.logged) {
@@ -109,9 +104,6 @@ async function handler(request, context, config, fetchResponse) {
                 await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
             })(),
         );
-    }
-    if (config.mode === "light" && hasLocation) {
-        return NextResponse.redirect(url.origin + location, response.status);
     }
     return response;
 }

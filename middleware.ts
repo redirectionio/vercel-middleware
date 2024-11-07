@@ -78,19 +78,15 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
                     return response;
                 }
 
-                // If light mode, only return the response
-                if (config.mode === "light") {
-                    return response;
-                }
-
                 request = middlewareResponseToRequest(request, response, body);
             }
 
             if (!useFetch) {
                 return response ?? next();
             }
+
             // Disable for server-actions and components.
-            if (request.headers.get('Next-Action')?.length || request.headers.get('Accept') === "text/x-component") {
+            if (request.headers.get("Next-Action")?.length || request.headers.get("Accept") === "text/x-component") {
                 return response ?? next();
             }
 
@@ -140,14 +136,15 @@ async function handler(
     const [response, backendStatusCode] = await proxy(request, action, (request) => {
         request.headers.set("x-redirectionio-middleware", "true");
 
-        return fetchResponse(request, true);
+        // skip fetch if we are in light mode
+        return fetchResponse(request, config.mode === "full");
     });
 
     const url = new URL(request.url);
     const location = response.headers.get("Location");
-    const hasLocation = location && location.startsWith("/");
 
-    if (hasLocation) {
+    // Fix relative location header
+    if (location && location.startsWith("/")) {
         response.headers.set("Location", url.origin + location);
     }
 
@@ -157,10 +154,6 @@ async function handler(
                 await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
             })(),
         );
-    }
-
-    if (config.mode === "light" && hasLocation) {
-        return NextResponse.redirect(url.origin + location, response.status);
     }
 
     return response;
