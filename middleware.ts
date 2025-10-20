@@ -133,12 +133,14 @@ async function handler(
     const ip = ipAddress(request);
     const redirectionIORequest = createRedirectionIORequest(request, ip);
     const action = await fetchRedirectionIOAction(redirectionIORequest);
+    const actionMatchTime = Date.now();
     const [response, backendStatusCode] = await proxy(request, action, (request) => {
         request.headers.set("x-redirectionio-middleware", "true");
 
         // skip fetch if we are in light mode
         return fetchResponse(request, config.mode === "full");
     });
+    const proxyResponseTime = Date.now();
 
     const url = new URL(request.url);
     const location = response.headers.get("Location");
@@ -151,7 +153,16 @@ async function handler(
     if (config.logged) {
         context.waitUntil(
             (async function () {
-                await log(response, backendStatusCode, redirectionIORequest, startTimestamp, action, ip);
+                await log(
+                    response,
+                    backendStatusCode,
+                    redirectionIORequest,
+                    startTimestamp,
+                    actionMatchTime,
+                    proxyResponseTime,
+                    action,
+                    ip,
+                );
             })(),
         );
     }
@@ -437,6 +448,8 @@ async function log(
     backendStatusCode: number,
     redirectionioRequest: redirectionio.Request,
     startTimestamp: number,
+    actionMatchTime: number,
+    proxyResponseTime: number,
     action: redirectionio.Action,
     clientIP: string | undefined,
 ) {
@@ -462,6 +475,8 @@ async function log(
             action,
             "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
             BigInt(startTimestamp),
+            BigInt(actionMatchTime),
+            BigInt(proxyResponseTime),
             clientIP ?? "",
         );
 
