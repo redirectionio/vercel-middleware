@@ -1,19 +1,26 @@
 import { next, RequestContext } from "@vercel/edge";
 import { ipAddress } from "@vercel/functions";
 import * as redirectionio from "@redirection.io/redirectionio";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
+import { getEnv } from "./env";
+import {
+    createRedirectionIORequest,
+    REDIRECTIONIO_ACTION_HEADER,
+    REDIRECTIONIO_MATCH_TIME_TIME_HEADER,
+    REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER,
+    REDIRECTIONIO_START_TIME_HEADER,
+} from "./common";
 
-const REDIRECTIONIO_TOKEN = process.env.REDIRECTIONIO_TOKEN || "";
-const REDIRECTIONIO_INSTANCE_NAME = process.env.REDIRECTIONIO_INSTANCE_NAME || "redirection-io-vercel-middleware";
-const REDIRECTIONIO_VERSION = "redirection-io-vercel-middleware/0.3.12";
-const REDIRECTIONIO_ADD_HEADER_RULE_IDS = process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS
-    ? process.env.REDIRECTIONIO_ADD_HEADER_RULE_IDS === "true"
-    : false;
-const REDIRECTIONIO_TIMEOUT = process.env.REDIRECTIONIO_TIMEOUT ? parseInt(process.env.REDIRECTIONIO_TIMEOUT, 10) : 500;
+const {
+    REDIRECTIONIO_TOKEN,
+    REDIRECTIONIO_INSTANCE_NAME,
+    REDIRECTIONIO_VERSION,
+    REDIRECTIONIO_ADD_HEADER_RULE_IDS,
+    REDIRECTIONIO_TIMEOUT,
+} = getEnv();
 
 const DEFAULT_CONFIG = {
     matcherRegex: "^/((?!api/|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)$",
-    mode: "full",
     logged: true,
 } as const;
 
@@ -25,7 +32,6 @@ type CreateMiddlewareConfig = {
     previousMiddleware?: Middleware;
     nextMiddleware?: Middleware;
     matcherRegex?: string | null;
-    mode?: "full" | "light";
     logged?: boolean;
 };
 
@@ -68,7 +74,7 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
             middlewareRequest = middlewareResponseToRequest(middlewareRequest, response, body);
         }
 
-        return handler(middlewareRequest, context, config, async (request, useFetch): Promise<Response> => {
+        return handler(middlewareRequest, async (request, useFetch): Promise<Response> => {
             let response: Response | null = null;
 
             if (config.nextMiddleware) {
@@ -114,12 +120,7 @@ const defaultMiddleware = createRedirectionIoMiddleware({});
 
 export default defaultMiddleware;
 
-async function handler(
-    request: Request,
-    context: RequestContext,
-    config: CreateMiddlewareConfig,
-    fetchResponse: FetchResponse,
-): Promise<Response> {
+async function handler(request: Request, fetchResponse: FetchResponse): Promise<Response> {
     if (!REDIRECTIONIO_TOKEN) {
         console.warn("No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.");
 
@@ -131,16 +132,27 @@ async function handler(
     await redirectionio.init();
 
     const ip = ipAddress(request);
-    const redirectionIORequest = createRedirectionIORequest(request, ip);
+    const redirectionIORequest = createRedirectionIORequest({
+        url: new URL(request.url),
+        headers: Object.fromEntries(Object.entries(request.headers)) as Record<string, string>,
+        method: request.method,
+        ip,
+    });
     const action = await fetchRedirectionIOAction(redirectionIORequest);
     const actionMatchTime = Date.now();
-    const [response, backendStatusCode] = await proxy(request, action, (request) => {
+    const [response] = await proxy(request, action, (request) => {
         request.headers.set("x-redirectionio-middleware", "true");
 
         // skip fetch if we are in light mode
-        return fetchResponse(request, config.mode === "full");
+        return fetchResponse(request, action.need_proxification());
     });
     const proxyResponseTime = Date.now();
+
+    response.headers.set(REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER, proxyResponseTime.toString());
+    response.headers.set(REDIRECTIONIO_START_TIME_HEADER, startTimestamp.toString());
+    response.headers.set(REDIRECTIONIO_MATCH_TIME_TIME_HEADER, actionMatchTime.toString());
+    // TODO: Serialize the action object and set it as a header
+    // response.headers.set(REDIRECTIONIO_ACTION_HEADER, JSON.stringify(action));
 
     const url = new URL(request.url);
     const location = response.headers.get("Location");
@@ -148,23 +160,6 @@ async function handler(
     // Fix relative location header
     if (location && location.startsWith("/")) {
         response.headers.set("Location", url.origin + location);
-    }
-
-    if (config.logged) {
-        context.waitUntil(
-            (async function () {
-                await log(
-                    response,
-                    backendStatusCode,
-                    redirectionIORequest,
-                    startTimestamp,
-                    actionMatchTime,
-                    proxyResponseTime,
-                    action,
-                    ip,
-                );
-            })(),
-        );
     }
 
     return response;
@@ -234,26 +229,6 @@ function splitSetCookies(cookiesString: string) {
     }
 
     return cookiesStrings;
-}
-
-function createRedirectionIORequest(request: Request, ip?: string) {
-    const urlObject = new URL(request.url);
-    const redirectionioRequest = new redirectionio.Request(
-        urlObject.pathname + urlObject.search,
-        urlObject.host,
-        urlObject.protocol.replace(":", ""),
-        request.method,
-    );
-
-    request.headers.forEach((value, key) => {
-        redirectionioRequest.add_header(key, value);
-    });
-
-    if (ip) {
-        redirectionioRequest.set_remote_ip(ip);
-    }
-
-    return redirectionioRequest;
 }
 
 function middlewareResponseToRequest(originalRequest: Request, response: Response, body: ArrayBuffer | null): Request {
@@ -441,55 +416,4 @@ async function createBodyFilter(
     }
 
     await writer.close();
-}
-
-async function log(
-    response: Response,
-    backendStatusCode: number,
-    redirectionioRequest: redirectionio.Request,
-    startTimestamp: number,
-    actionMatchTime: number,
-    proxyResponseTime: number,
-    action: redirectionio.Action,
-    clientIP: string | undefined,
-) {
-    if (response === null) {
-        return;
-    }
-
-    const responseHeaderMap = new redirectionio.HeaderMap();
-
-    response.headers.forEach((value, key) => {
-        responseHeaderMap.add_header(key, value);
-    });
-
-    if (action && !action.should_log_request(backendStatusCode)) {
-        return;
-    }
-
-    try {
-        const logAsJson = redirectionio.create_log_in_json(
-            redirectionioRequest,
-            response.status,
-            responseHeaderMap,
-            action,
-            "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
-            BigInt(startTimestamp),
-            BigInt(actionMatchTime),
-            BigInt(proxyResponseTime),
-            clientIP ?? "",
-        );
-
-        return await fetch("https://agent.redirection.io/" + REDIRECTIONIO_TOKEN + "/log", {
-            method: "POST",
-            body: logAsJson,
-            headers: {
-                "User-Agent": "vercel-edge-middleware/" + REDIRECTIONIO_VERSION,
-                "x-redirectionio-instance-name": REDIRECTIONIO_INSTANCE_NAME,
-            },
-            cache: "no-store",
-        });
-    } catch (err) {
-        console.error(err);
-    }
 }

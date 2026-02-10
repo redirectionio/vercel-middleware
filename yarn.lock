@@ -52,10 +52,10 @@
   resolved "https://registry.yarnpkg.com/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-14.2.33.tgz#f1a40062530c17c35a86d8c430b3ae465eb7cea1"
   integrity sha512-nOjfZMy8B94MdisuzZo9/57xuFVLHJaDj5e/xrduJp9CV2/HrfxTRH2fbyLe+K9QT41WBLUd4iXX3R7jBp0EUg==
 
-"@redirection.io/redirectionio@< 2.11.10 || ^2.11.11":
-  version "2.11.11"
-  resolved "https://registry.yarnpkg.com/@redirection.io/redirectionio/-/redirectionio-2.11.11.tgz#5e3da9405eee00e784a793360c0412751d709370"
-  integrity sha512-L92JzyPaQLitXO33+BbvTT2WEX5WzOKvD5C3ucYx1K/y7+sl3/ptbCWdAzzqS0URZMmrVllk+XpE8oJa6ARelA==
+"@redirection.io/redirectionio@^3.0.1-dev":
+  version "3.0.1-dev"
+  resolved "https://registry.yarnpkg.com/@redirection.io/redirectionio/-/redirectionio-3.0.1-dev.tgz#138f75535007a03d8c0b843b43d17d6660af86ae"
+  integrity sha512-HhH7CzKD9jvxsdSbdZHj55UlNEDigBtEfnQHcNFrju9u+3bKla9/MXMc/eqdBEV4os1EOpTABBJ3fou8IYDtQg==
 
 "@swc/counter@^0.1.3":
   version "0.1.3"
@@ -69,6 +69,13 @@
   dependencies:
     "@swc/counter" "^0.1.3"
     tslib "^2.4.0"
+
+"@types/node@^25.2.2":
+  version "25.2.2"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-25.2.2.tgz#0ddfe326c326afcb3422d32bfe5eb2938e1cb5db"
+  integrity sha512-BkmoP5/FhRYek5izySdkOneRyXYN35I860MFAGupTdebyE66uZaR+bXLHq8k4DirE5DwQi3NuhvRU1jqTVwUrQ==
+  dependencies:
+    undici-types "~7.16.0"
 
 "@vercel/edge@^1.1.2":
   version "1.1.2"
@@ -175,3 +182,8 @@ typescript@^5.4.5:
   version "5.6.3"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-5.6.3.tgz#5f3449e31c9d94febb17de03cc081dd56d81db5b"
   integrity sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw==
+
+undici-types@~7.16.0:
+  version "7.16.0"
+  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-7.16.0.tgz#ffccdff36aea4884cbfce9a750a0580224f58a46"
+  integrity sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==
