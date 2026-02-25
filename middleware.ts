@@ -1,8 +1,6 @@
+import * as redirectionio from "@redirection.io/redirectionio";
 import { next, RequestContext } from "@vercel/edge";
 import { ipAddress } from "@vercel/functions";
-import * as redirectionio from "@redirection.io/redirectionio";
-import { type NextRequest } from "next/server";
-import { getEnv } from "./env";
 import {
     createRedirectionIORequest,
     REDIRECTIONIO_ACTION_HEADER,
@@ -10,6 +8,8 @@ import {
     REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER,
     REDIRECTIONIO_START_TIME_HEADER,
 } from "./common";
+import { getEnv } from "./env";
+import { Middleware } from "./types";
 
 const {
     REDIRECTIONIO_TOKEN,
@@ -24,18 +24,19 @@ const DEFAULT_CONFIG = {
     logged: true,
 } as const;
 
-type Middleware = (request: Request | NextRequest, context: RequestContext) => Response | Promise<Response>;
-
 type FetchResponse = (request: Request, useFetch: boolean) => Promise<Response>;
 
-type CreateMiddlewareConfig = {
-    previousMiddleware?: Middleware;
-    nextMiddleware?: Middleware;
+type CreateMiddlewareConfig<R extends Request = Request, C extends RequestContext = RequestContext> = {
+    previousMiddleware?: Middleware<R, C>;
+    nextMiddleware?: Middleware<R, C>;
     matcherRegex?: string | null;
     logged?: boolean;
+    includedRequestHeadersInResponse?: string[];
 };
 
-export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
+export const createRedirectionIoMiddleware = <R extends Request = Request, C extends RequestContext = RequestContext>(
+    config: CreateMiddlewareConfig<R, C>,
+): Middleware<R, C> => {
     return async (request, context) => {
         const pathname = new URL(request.url).pathname;
 
@@ -51,21 +52,19 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
         // Avoid infinite loop
         if (
             request.headers.get("x-redirectionio-middleware") === "true" ||
-            request.headers.get("User-Agent") === "Vercel Edge Functions"
+            request.headers.get("User-Agent") === "Vercel Edge Functions" ||
+            request.headers.get("Accept") === "text/x-component" ||
+            request.headers.get("Next-Action")?.length
         ) {
             return next();
         }
 
         const body = request.body ? await request.arrayBuffer() : null;
 
-        let middlewareRequest = new Request(request.url, {
-            method: request.method,
-            headers: request.headers,
-            body,
-        });
+        let middlewareRequest = request.clone();
 
         if (config.previousMiddleware) {
-            const response = await config.previousMiddleware(middlewareRequest, context);
+            const response = await config.previousMiddleware(middlewareRequest as R, context);
 
             if (response.status !== 200) {
                 return response;
@@ -74,45 +73,52 @@ export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): M
             middlewareRequest = middlewareResponseToRequest(middlewareRequest, response, body);
         }
 
-        return handler(middlewareRequest, async (request, useFetch): Promise<Response> => {
-            let response: Response | null = null;
+        return handler(
+            middlewareRequest,
+            config.includedRequestHeadersInResponse,
+            async (request, useFetch): Promise<Response> => {
+                let response: Response | null = null;
 
-            if (config.nextMiddleware) {
-                response = await config.nextMiddleware(request, context);
+                if (config.nextMiddleware) {
+                    response = await config.nextMiddleware(request as R, context);
 
-                if (response.status !== 200) {
-                    return response;
+                    if (response.status !== 200) {
+                        return response;
+                    }
+
+                    request = middlewareResponseToRequest(request, response, body);
                 }
 
-                request = middlewareResponseToRequest(request, response, body);
-            }
+                if (!useFetch) {
+                    return response ?? next();
+                }
 
-            if (!useFetch) {
-                return response ?? next();
-            }
+                // Disable for server-actions and components.
+                if (
+                    request.headers.get("Next-Action")?.length ||
+                    request.headers.get("Accept") === "text/x-component"
+                ) {
+                    return response ?? next();
+                }
 
-            // Disable for server-actions and components.
-            if (request.headers.get("Next-Action")?.length || request.headers.get("Accept") === "text/x-component") {
-                return response ?? next();
-            }
-
-            const fetchResponse = await fetch(request, {
-                redirect: "manual",
-                cache: "no-store",
-            });
-
-            const backendResponse = new Response(fetchResponse.body, fetchResponse);
-
-            if (response) {
-                response.headers.forEach((value, key) => {
-                    if (!key.startsWith("x-middleware-")) {
-                        backendResponse.headers.set(key, value);
-                    }
+                const fetchResponse = await fetch(request, {
+                    redirect: "manual",
+                    cache: "no-store",
                 });
-            }
 
-            return backendResponse;
-        });
+                const backendResponse = new Response(fetchResponse.body, fetchResponse);
+
+                if (response) {
+                    response.headers.forEach((value, key) => {
+                        if (!key.startsWith("x-middleware-")) {
+                            backendResponse.headers.set(key, value);
+                        }
+                    });
+                }
+
+                return backendResponse;
+            },
+        );
     };
 };
 
@@ -120,7 +126,11 @@ const defaultMiddleware = createRedirectionIoMiddleware({});
 
 export default defaultMiddleware;
 
-async function handler(request: Request, fetchResponse: FetchResponse): Promise<Response> {
+async function handler(
+    request: Request,
+    includedRequestHeadersInResponse: string[] | undefined,
+    fetchResponse: FetchResponse,
+): Promise<Response> {
     if (!REDIRECTIONIO_TOKEN) {
         console.warn("No REDIRECTIONIO_TOKEN environment variable found. Skipping redirection.io middleware.");
 
@@ -140,12 +150,13 @@ async function handler(request: Request, fetchResponse: FetchResponse): Promise<
     });
     const action = await fetchRedirectionIOAction(redirectionIORequest);
     const actionMatchTime = Date.now();
-    const [response] = await proxy(request, action, (request) => {
+    const [response] = await proxy(request, action, includedRequestHeadersInResponse, (request) => {
         request.headers.set("x-redirectionio-middleware", "true");
 
         // skip fetch if we are in light mode
         return fetchResponse(request, action.need_proxification());
     });
+
     const proxyResponseTime = Date.now();
 
     response.headers.set(REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER, proxyResponseTime.toString());
@@ -295,6 +306,7 @@ async function fetchRedirectionIOAction(redirectionIORequest: redirectionio.Requ
 async function proxy(
     request: Request,
     action: redirectionio.Action,
+    includedRequestHeadersInResponse: string[] | undefined,
     fetchResponse: FetchResponse,
 ): Promise<[Response, number]> {
     try {
@@ -328,6 +340,12 @@ async function proxy(
                     headerMap.add_header("set-cookie", cookie);
                 }
             } else {
+                headerMap.add_header(key, value);
+            }
+        });
+
+        request.headers.forEach((value, key) => {
+            if (includedRequestHeadersInResponse?.includes(key)) {
                 headerMap.add_header(key, value);
             }
         });

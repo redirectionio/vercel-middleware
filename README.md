@@ -20,6 +20,8 @@ yarn add @redirection.io/vercel-middleware
 Create a `middleware.ts` (or `proxy.ts` depending on your Next.js version) file in the root of your Vercel application (at the same level as the `app` or `pages` folders,
 possibly in a `src` folder if your project uses one) with the following content:
 
+> For Next.js usage, see [the Next.js section](#nextjs)
+
 ```typescript
 import redirectionioMiddleware from "@redirection.io/vercel-middleware";
 

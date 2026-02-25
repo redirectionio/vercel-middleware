@@ -1,45 +1,46 @@
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import { createRedirectionIoMiddleware as createEdgeMiddleware } from "./middleware";
-import { RequestContext } from "@vercel/edge";
-
-type Middleware = (request: NextRequest, context: NextFetchEvent) => NextResponse | Promise<NextResponse>;
+import { NextMiddleware } from "./types";
 
 type CreateMiddlewareConfig = {
-    previousMiddleware?: Middleware;
-    nextMiddleware?: Middleware;
+    previousMiddleware?: NextMiddleware;
+    nextMiddleware?: NextMiddleware;
     matcherRegex?: string | null;
     logged?: boolean;
+    includedRequestHeadersInResponse?: string[];
 };
 
-export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): Middleware => {
-    let previousMiddleware;
-    let nextMiddleware;
+export const createRedirectionIoMiddleware = (config: CreateMiddlewareConfig): NextMiddleware => {
+    let previousMiddleware: NextMiddleware | undefined;
+    let nextMiddleware: NextMiddleware | undefined;
 
     const configPreviousMiddleware = config.previousMiddleware;
     const configNextMiddleware = config.nextMiddleware;
     const configMatcherRegex = config.matcherRegex;
 
     if (configPreviousMiddleware) {
-        previousMiddleware = (req: Request, context: RequestContext) => {
-            return configPreviousMiddleware(new NextRequest(req.url, req), context as any as NextFetchEvent);
+        previousMiddleware = (req: Request, evt?: NextFetchEvent) => {
+            return configPreviousMiddleware(new NextRequest(req), evt);
         };
     }
 
     if (configNextMiddleware) {
-        nextMiddleware = (req: Request, context: RequestContext) => {
-            return configNextMiddleware(new NextRequest(req.url, req), context as any as NextFetchEvent);
+        nextMiddleware = (req: Request, evt?: NextFetchEvent) => {
+            return configNextMiddleware(new NextRequest(req), evt);
         };
     }
 
-    const edgeMiddleware = createEdgeMiddleware({
+    const edgeMiddleware = createEdgeMiddleware<NextRequest, NextFetchEvent>({
         previousMiddleware,
         nextMiddleware,
         ...(configMatcherRegex ? { matcherRegex: configMatcherRegex } : {}),
         logged: config.logged ?? true,
+        // By default, handle next intl headers
+        includedRequestHeadersInResponse: ["x-next-intl-locale", ...(config.includedRequestHeadersInResponse ?? [])],
     });
 
-    return async (req: NextRequest, context: NextFetchEvent) => {
-        const response = await edgeMiddleware(req, context);
+    return async (req: NextRequest, evt?: NextFetchEvent) => {
+        const response = await edgeMiddleware(req, evt);
 
         return new NextResponse(response.body, response);
     };

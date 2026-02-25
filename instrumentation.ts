@@ -3,6 +3,7 @@ import { getEnv } from "./env";
 import { IncomingMessage, ServerResponse } from "http";
 import {
     createRedirectionIORequest,
+    fetchRedirectionIOAction,
     REDIRECTIONIO_ACTION_HEADER,
     REDIRECTIONIO_MATCH_TIME_TIME_HEADER,
     REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER,
@@ -43,14 +44,10 @@ export const registerRedirectionIoInstrumentation = async () => {
 
             const statusCode = response.statusCode;
 
-            const proxyResponseTime = Number(request.headers[REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER]) || 0;
-            const actionMatchTime = Number(request.headers[REDIRECTIONIO_MATCH_TIME_TIME_HEADER]) || 0;
-            const startTimestamp = Number(request.headers[REDIRECTIONIO_START_TIME_HEADER]) || 0;
-            const action = (request.headers[REDIRECTIONIO_ACTION_HEADER] as string) || "";
-
-            if (!action) {
-                return;
-            }
+            const proxyResponseTime = Number(request.headers[REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER]) || Date.now();
+            const actionMatchTime = Number(request.headers[REDIRECTIONIO_MATCH_TIME_TIME_HEADER]) || Date.now();
+            const startTimestamp = Number(request.headers[REDIRECTIONIO_START_TIME_HEADER]) || Date.now();
+            const actionStr = (request.headers[REDIRECTIONIO_ACTION_HEADER] as string) || "";
 
             const ip = (request.headers["x-real-ip"] as string) || request.socket.remoteAddress;
             const redirectionIORequest = createRedirectionIORequest({
@@ -60,6 +57,14 @@ export const registerRedirectionIoInstrumentation = async () => {
                 ip,
             });
 
+            let action: redirectionio.Action;
+
+            if (!actionStr) {
+                action = await fetchRedirectionIOAction(redirectionIORequest);
+            } else {
+                action = new redirectionio.Action(actionStr);
+            }
+
             await log(
                 response,
                 statusCode,
@@ -67,7 +72,7 @@ export const registerRedirectionIoInstrumentation = async () => {
                 startTimestamp,
                 actionMatchTime,
                 proxyResponseTime,
-                new redirectionio.Action(action),
+                action,
                 ip,
             );
         });
