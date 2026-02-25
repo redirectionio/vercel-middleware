@@ -20,7 +20,7 @@
         "./instrumentation": "./dist/instrumentation.js"
     },
     "dependencies": {
-        "@redirection.io/redirectionio": "^3.0.1-dev",
+        "@redirection.io/redirectionio": "^3.0.2-dev",
         "@vercel/edge": "^1.1.2",
         "@vercel/functions": "^1.4.1"
     },

@@ -151,8 +151,7 @@ async function handler(request: Request, fetchResponse: FetchResponse): Promise<
     response.headers.set(REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER, proxyResponseTime.toString());
     response.headers.set(REDIRECTIONIO_START_TIME_HEADER, startTimestamp.toString());
     response.headers.set(REDIRECTIONIO_MATCH_TIME_TIME_HEADER, actionMatchTime.toString());
-    // TODO: Serialize the action object and set it as a header
-    // response.headers.set(REDIRECTIONIO_ACTION_HEADER, JSON.stringify(action));
+    response.headers.set(REDIRECTIONIO_ACTION_HEADER, action.serialize());
 
     const url = new URL(request.url);
     const location = response.headers.get("Location");
