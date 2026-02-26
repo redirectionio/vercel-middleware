@@ -1,6 +1,6 @@
 {
     "name": "@redirection.io/vercel-middleware",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Vercel Edge Middleware for redirection.io",
     "main": "dist/middleware.js",
     "license": "MIT",
