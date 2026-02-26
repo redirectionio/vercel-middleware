@@ -2,22 +2,30 @@
     "name": "@redirection.io/vercel-middleware",
     "version": "0.4.0",
     "description": "Vercel Edge Middleware for redirection.io",
-    "main": "middleware.js",
+    "main": "dist/middleware.js",
     "license": "MIT",
     "private": false,
     "type": "module",
     "files": [
-        "middleware.js",
-        "middleware.d.ts",
-        "next.js",
-        "next.d.ts"
+        "dist"
     ],
+    "scripts": {
+        "dev": "tsc -w",
+        "build": "tsc"
+    },
+    "exports": {
+        ".": "./dist/middleware.js",
+        "./middleware": "./dist/middleware.js",
+        "./next": "./dist/next.js",
+        "./instrumentation": "./dist/instrumentation.js"
+    },
     "dependencies": {
-        "@redirection.io/redirectionio": "< 2.11.10 || ^2.11.11",
+        "@redirection.io/redirectionio": "^3.0.2-dev",
         "@vercel/edge": "^1.1.2",
         "@vercel/functions": "^1.4.1"
     },
     "devDependencies": {
+        "@types/node": "^25.2.2",
         "next": "^14.2.13",
         "prettier": "3.3.3",
         "typescript": "^5.4.5"

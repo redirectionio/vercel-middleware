@@ -17,8 +17,10 @@ yarn add @redirection.io/vercel-middleware
 
 ## Usage
 
-Create a `middleware.ts` file in the root of your Vercel application (at the same level as the `app` or `pages` folders,
+Create a `middleware.ts` (or `proxy.ts` depending on your Next.js version) file in the root of your Vercel application (at the same level as the `app` or `pages` folders,
 possibly in a `src` folder if your project uses one) with the following content:
+
+> For Next.js usage, see [the Next.js section](#nextjs)
 
 ```typescript
 import redirectionioMiddleware from "@redirection.io/vercel-middleware";
@@ -31,6 +33,16 @@ export const config = {
 ```
 
 Set the `REDIRECTIONIO_TOKEN` environment variable in your vercel project settings.
+
+Then create a `instrumentation.ts` file in the same folder as the `proxy.ts` file with the following content:
+
+```typescript
+import { registerRedirectionIoInstrumentation } from "@redirection.io/vercel-middleware/instrumentation";
+
+export const register = async () => {
+  registerRedirectionIoInstrumentation();
+};
+```
 
 Then, deploy your project to Vercel.
 
@@ -89,23 +101,6 @@ Here's a summary of the middleware options:
 | `previousMiddleware` | Function          | Middleware to be executed before redirection.io middleware                                               |
 | `nextMiddleware`     | Function          | Middleware to be executed after redirection.io middleware                                                |
 | `matcherRegex`       | String or null    | Regex to specify which routes should be handled by redirection.io middleware                             |
-| `mode`               | `full` or `light` | If `light`, redirection.io middleware will only redirect and not override the response (default: `full`) |
-| `logged`             | Boolean           | If true, redirection.io middleware will log information in Redirection.io (default: `true`)              |
-
-## Light mode
-
-The response rewriting features (e.g., SEO overrides, custom body, etc.) of redirection.io are currently not compatible with React Server Components (RSC). This is due to the fact that Vercel’s middleware implementation does not follow standard middleware protocols, requiring us to fetch requests, which is incompatible with both RSC and Vercel’s implementation.
-
-However, we provide a light mode that supports RSC by offering only the redirection functionality. To enable this mode, simply set the `mode` option to `light`.
-
-This allows you to implement redirection behavior without modifying response content, ensuring smooth operation with RSC.
-
-```typescript
-const middleware = createRedirectionIoMiddleware({
-    // …
-    mode: "light",
-});
-```
 
 ## Next.js
 
