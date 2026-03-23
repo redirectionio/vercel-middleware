@@ -10,29 +10,34 @@
         "dist"
     ],
     "scripts": {
-        "build": "rslib build",
-        "dev": "rslib build --watch"
+        "build": "tsup",
+        "dev": "tsup --watch"
     },
     "exports": {
         ".": {
-            "require": "./dist/middleware.js",
-            "import": "./dist/middleware.mjs",
-            "types": "./dist/middleware.d.ts"
+            "types": "./dist/middleware.d.ts",
+            "import": "./dist/middleware.js",
+            "require": "./dist/middleware.cjs"
         },
         "./middleware": {
-            "require": "./dist/middleware.js",
-            "import": "./dist/middleware.mjs",
-            "types": "./dist/middleware.d.ts"
+            "types": "./dist/middleware.d.ts",
+            "import": "./dist/middleware.js",
+            "require": "./dist/middleware.cjs"
         },
         "./next": {
-            "require": "./dist/next.js",
-            "import": "./dist/next.mjs",
-            "types": "./dist/next.d.ts"
+            "types": "./dist/next.d.ts",
+            "import": "./dist/next.js",
+            "require": "./dist/next.cjs"
         },
         "./instrumentation": {
-            "require": "./dist/instrumentation.js",
-            "import": "./dist/instrumentation.mjs",
-            "types": "./dist/instrumentation.d.ts"
+            "types": "./dist/instrumentation.d.ts",
+            "import": "./dist/instrumentation.js",
+            "require": "./dist/instrumentation.cjs"
+        },
+        "./webpack": {
+            "types": "./dist/webpack.d.ts",
+            "import": "./dist/webpack.mjs",
+            "require": "./dist/webpack.cjs"
         }
     },
     "dependencies": {
@@ -41,11 +46,11 @@
         "@vercel/functions": "^1.4.1"
     },
     "devDependencies": {
-        "@rslib/core": "^0.20.0",
         "@types/node": "^25.2.2",
         "glob": "^13.0.6",
         "next": "^14.2.13",
         "prettier": "3.3.3",
+        "tsup": "^8.5.1",
         "typescript": "^5.4.5"
     },
     "peerDependencies": {
