@@ -26,12 +26,17 @@ export const registerRedirectionIoInstrumentation = async () => {
 
         channel.subscribe(async (message: { request: IncomingMessage; response: ServerResponse }) => {
             const { request, response } = message;
-            const url = request.url || "";
+            const nextInternalMeta = Symbol.for("NextInternalRequestMeta");
+            // @ts-expect-error
+            const requestUrl = request[nextInternalMeta]
+                ? // @ts-expect-error
+                  request[nextInternalMeta].initURL
+                : request.url;
 
             if (
-                url.startsWith("/_next/") ||
-                url.includes("/__nextjs") ||
-                /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|map|json)(\?|$)/i.test(url)
+                requestUrl.startsWith("/_next/") ||
+                requestUrl.includes("/__nextjs") ||
+                /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|map|json)(\?|$)/i.test(requestUrl)
             ) {
                 return; // Skip logging
             }
@@ -50,8 +55,9 @@ export const registerRedirectionIoInstrumentation = async () => {
             const actionStr = (request.headers[REDIRECTIONIO_ACTION_HEADER] as string) || "";
 
             const ip = (request.headers["x-real-ip"] as string) || request.socket.remoteAddress;
+
             const redirectionIORequest = createRedirectionIORequest({
-                url: new URL(request.url!, `${request.headers["x-forwarded-proto"]}://${request.headers.host}`),
+                url: new URL(requestUrl, `${request.headers["x-forwarded-proto"]}://${request.headers.host}`),
                 headers: request.headers as Record<string, string>,
                 method: request.method!,
                 ip,

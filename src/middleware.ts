@@ -61,7 +61,11 @@ export const createRedirectionIoMiddleware = <R extends Request = Request, C ext
 
         const body = request.body ? await request.arrayBuffer() : null;
 
-        let middlewareRequest = request.clone();
+        let middlewareRequest = new Request(request.url, {
+            method: request.method,
+            headers: request.headers,
+            body,
+        });
 
         if (config.previousMiddleware) {
             const response = await config.previousMiddleware(middlewareRequest as R, context);
