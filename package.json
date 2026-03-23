@@ -10,14 +10,35 @@
         "dist"
     ],
     "scripts": {
-        "dev": "tsc -w",
-        "build": "tsc"
+        "build": "tsup",
+        "dev": "tsup --watch"
     },
     "exports": {
-        ".": "./dist/middleware.js",
-        "./middleware": "./dist/middleware.js",
-        "./next": "./dist/next.js",
-        "./instrumentation": "./dist/instrumentation.js"
+        ".": {
+            "types": "./dist/middleware.d.ts",
+            "import": "./dist/middleware.js",
+            "require": "./dist/middleware.cjs"
+        },
+        "./middleware": {
+            "types": "./dist/middleware.d.ts",
+            "import": "./dist/middleware.js",
+            "require": "./dist/middleware.cjs"
+        },
+        "./next": {
+            "types": "./dist/next.d.ts",
+            "import": "./dist/next.js",
+            "require": "./dist/next.cjs"
+        },
+        "./instrumentation": {
+            "types": "./dist/instrumentation.d.ts",
+            "import": "./dist/instrumentation.js",
+            "require": "./dist/instrumentation.cjs"
+        },
+        "./webpack": {
+            "types": "./dist/webpack.d.ts",
+            "import": "./dist/webpack.mjs",
+            "require": "./dist/webpack.cjs"
+        }
     },
     "dependencies": {
         "@redirection.io/redirectionio": "^3.0.0",
@@ -26,8 +47,10 @@
     },
     "devDependencies": {
         "@types/node": "^25.2.2",
+        "glob": "^13.0.6",
         "next": "^14.2.13",
         "prettier": "3.3.3",
+        "tsup": "^8.5.1",
         "typescript": "^5.4.5"
     },
     "peerDependencies": {

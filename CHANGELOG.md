@@ -1,3 +1,14 @@
+## 0.5.1 - 23/03/2026
+
+-   Add support for ESM and CJS
+-   Fix clone request that modified the URL
+-   Add Webpack support
+
+## 0.5.0 - 25/02/2026
+
+-   Improve the logging feature by using instrumentation
+-   Get rid of the light mode support that is now useless
+
 ## 0.4.0 - 07/11/2024
 
 -   Add light mode support

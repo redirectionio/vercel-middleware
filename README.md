@@ -119,6 +119,24 @@ from `@redirection.io/vercel-middleware/next` which is compatible with `NextRequ
 
 ```
 
+### Webpack
+
+If you are using Webpack in your Next.js application, you will need to add the following in your Next config :
+
+```typescript
+import { redirectionIoWebpackWasmRule } from "@redirection.io/vercel-middleware/webpack";
+
+const nextConfig: NextConfig = {
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.module.rules.push(redirectionIoWebpackWasmRule);
+    }
+
+    return config;
+  },
+};
+```
+
 ### Development
 
 Build
