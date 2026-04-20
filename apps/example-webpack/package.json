@@ -1,0 +1,30 @@
+{
+    "name": "example-webpack",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev --webpack --port 3001",
+        "build": "next build --webpack",
+        "start": "next start",
+        "lint": "oxlint --config ../../.oxlintrc.json",
+        "lint:fix": "oxlint --fix --config ../../.oxlintrc.json",
+        "format": "oxfmt -c ../../.oxfmtrc.json",
+        "format:check": "oxfmt -c ../../.oxfmtrc.json --check"
+    },
+    "dependencies": {
+        "@redirection.io/vercel-middleware": "workspace:*",
+        "next": "16.2.4",
+        "react": "19.2.4",
+        "react-dom": "19.2.4"
+    },
+    "devDependencies": {
+        "@tailwindcss/postcss": "^4",
+        "@types/node": "^20",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
+        "oxfmt": "catalog:",
+        "oxlint": "catalog:",
+        "tailwindcss": "^4",
+        "typescript": "^5"
+    }
+}

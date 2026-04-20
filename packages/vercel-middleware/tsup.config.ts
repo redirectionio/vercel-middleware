@@ -6,7 +6,12 @@ export default defineConfig({
     entry: glob.sync("src/**/*.{ts,tsx}", {
         ignore: ["**/tests/*", "**/*.test.{ts,tsx}"],
     }),
-    dts: true,
+    dts: {
+        compilerOptions: {
+            // https://github.com/egoist/tsup/issues/1388
+            ignoreDeprecations: "6.0",
+        },
+    },
     clean: true,
     format: ["esm", "cjs"],
     outExtension: ({ format }) => {
