@@ -1,0 +1,59 @@
+name: E2E tests
+on:
+    push:
+        branches:
+            - "master"
+        paths:
+            - "packages/**"
+            - "apps/example"
+            - "apps/example-*"
+    pull_request:
+        paths:
+            - "packages/**"
+            - "apps/example"
+            - "apps/example-*"
+jobs:
+    start:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - name: Enable corepack
+              run: corepack enable
+            - uses: actions/setup-node@v3
+              with:
+                  cache: "yarn"
+            - name: Cache playwright dependencies
+              id: cache-playwright
+              uses: actions/cache@v3
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+            - name: Install dependencies
+              run: yarn install
+            - name: Setup packages (Build)
+              run: yarn build:packages
+            - name: Run linter
+              run: yarn lint
+            - name: Run typecheck
+              run: yarn types
+            - name: Install playwright dependencies
+              if: steps.cache-playwright.outputs.cache-hit != 'true'
+              run: npx playwright install --with-deps
+            - name: Build packages
+              run: yarn build:examples
+            - name: Start server
+              run: yarn start:examples &
+            - name: Run tests
+              env:
+                  REDIRECTIONIO_TOKEN: ${{ secrets.REDIRECTIONIO_TOKEN }}
+              run: |
+                  echo "Run E2E tests for Next.js with Turbopack"
+                  BASE_URL=http://localhost:3000 yarn test:e2e
+                  echo "Run E2E tests for Next.js with Webpack"
+                  BASE_URL=http://localhost:3001 yarn test:e2e
+            - uses: actions/upload-artifact@v4
+              if: ${{ !cancelled() }}
+              with:
+                  name: playwright-report
+                  path: apps/example/playwright-report/
+                  retention-days: 30

@@ -3,3 +3,12 @@ node_modules
 dist
 package-lock.json
 .DS_Store
+
+# Yarn
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+.pnp.*
+
+# Turborepo
+.turbo

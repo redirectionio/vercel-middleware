@@ -139,8 +139,10 @@ const nextConfig: NextConfig = {
 
 ### Development
 
-Build
+Run the example apps and the lib compilation :
 
 ```bash
-yarn run tsc
+yarn dev
 ```
+
+Before making a PR, run `yarn changeset` and select the packages to update. If your changes are not related to a lib update, simply run `yarn changeset add --empty`.
