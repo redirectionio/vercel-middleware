@@ -15,7 +15,7 @@
         "build": "turbo run build",
         "build:packages": "turbo run build --filter=\"packages/*\"",
         "build:examples": "turbo run build --filter=\"./apps/*\"",
-        "start:examples": "turbo run start --filter=\"./apps/*\"",
+        "start:examples": "turbo run start --filter=\"./apps/*\" --daemon",
         "lint": "turbo run lint",
         "format": "turbo run format",
         "types": "turbo run types",
@@ -27,7 +27,7 @@
         "@changesets/cli": "^2.31.0",
         "oxfmt": "catalog:",
         "oxlint": "catalog:",
-        "playwright": "^1.59.1",
+        "playwright": "^1.60",
         "turbo": "^2.9.6",
         "typescript": "catalog:"
     }

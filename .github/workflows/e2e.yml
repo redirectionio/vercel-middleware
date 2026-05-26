@@ -42,10 +42,10 @@ jobs:
             - name: Build packages
               run: yarn build:examples
             - name: Start server
-              run: yarn start:examples &
-            - name: Run tests
               env:
                   REDIRECTIONIO_TOKEN: ${{ secrets.REDIRECTIONIO_TOKEN }}
+              run: yarn start:examples &
+            - name: Run tests
               run: |
                   echo "Run E2E tests for Next.js with Turbopack"
                   BASE_URL=http://localhost:3000 yarn test:e2e

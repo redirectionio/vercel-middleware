@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "next dev --webpack --port 3001",
         "build": "next build --webpack",
-        "start": "next start",
+        "start": "next start --port 3001",
         "lint": "oxlint --config ../../.oxlintrc.json",
         "lint:fix": "oxlint --fix --config ../../.oxlintrc.json",
         "format": "oxfmt -c ../../.oxfmtrc.json",
