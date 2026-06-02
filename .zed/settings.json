@@ -1,16 +1,16 @@
 {
-  "formatter": [
-    {
-      "language_server": {
-        "name": "oxfmt",
-      },
+    "formatter": [
+        {
+            "language_server": {
+                "name": "oxfmt"
+            }
+        },
+        {
+            "code_action": "source.fixAll.oxc"
+        }
+    ],
+    "prettier": {
+        "allowed": false
     },
-    {
-      "code_action": "source.fixAll.oxc",
-    },
-  ],
-  "prettier": {
-    "allowed": false,
-  },
-  "language_servers": ["!eslint", "!biome", "..."],
+    "language_servers": ["!eslint", "!biome", "..."]
 }
