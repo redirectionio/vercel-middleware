@@ -1,17 +1,16 @@
 {
     "$schema": "https://turborepo.dev/schema.json",
+    "globalDependencies": ["**/.env.*local", "**/.env"],
+    "globalEnv": ["REDIRECTIONIO_TOKEN"],
     "ui": "tui",
     "tasks": {
         "build": {
             "dependsOn": ["^build"],
-            "inputs": [".env*"],
-            "outputs": [".next/**", "!.next/cache/**"]
+            "outputs": [".next/**", "!.next/cache/**", "dist/**"]
         },
         "start": {
             "dependsOn": ["^build"],
-            "inputs": [".env*"],
-            "outputs": [".next/**", "!.next/cache/**"],
-            "env": ["REDIRECTIONIO_TOKEN"]
+            "outputs": [".next/**", "!.next/cache/**"]
         },
         "lint": {
             "dependsOn": ["^lint"]

@@ -13,7 +13,7 @@
     "scripts": {
         "dev": "turbo run dev",
         "build": "turbo run build",
-        "build:packages": "turbo run build --filter=\"packages/*\"",
+        "build:packages": "turbo run build --filter=\"./packages/*\"",
         "build:examples": "turbo run build --filter=\"./apps/*\"",
         "start:examples": "turbo run start --filter=\"./apps/*\" --daemon",
         "lint": "turbo run lint",

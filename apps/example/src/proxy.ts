@@ -30,7 +30,7 @@ export default async function (request: Request) {
     // prev-header and next-header are available in the response headers
     console.log(response.headers);
 
-    return response;
+    return NextResponse.next(response);
 }
 
 export const config = {
