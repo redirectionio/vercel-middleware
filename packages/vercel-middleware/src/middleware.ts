@@ -274,6 +274,12 @@ function middlewareResponseToRequest(originalRequest: Request, response: Respons
         }
     }
 
+    response.headers.forEach((val, key) => {
+        if (!key.startsWith("x-middleware-")) {
+            request.headers.set(key, val);
+        }
+    });
+
     return request;
 }
 

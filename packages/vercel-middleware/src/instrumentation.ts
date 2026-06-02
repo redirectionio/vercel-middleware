@@ -27,11 +27,16 @@ export const registerRedirectionIoInstrumentation = async () => {
         channel.subscribe(async (message: { request: IncomingMessage; response: ServerResponse }) => {
             const { request, response } = message;
             const nextInternalMeta = Symbol.for("NextInternalRequestMeta");
-            // @ts-expect-error
-            const requestUrl = request[nextInternalMeta]
-                ? // @ts-expect-error
-                  request[nextInternalMeta].initURL
-                : request.url;
+            const requestUrl =
+                // @ts-expect-error
+                request[nextInternalMeta] && request[nextInternalMeta].initURL
+                    ? // @ts-expect-error
+                      request[nextInternalMeta].initURL
+                    : request.url;
+
+            if (!requestUrl) {
+                return;
+            }
 
             if (
                 requestUrl.startsWith("/_next/") ||

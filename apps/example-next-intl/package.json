@@ -1,11 +1,11 @@
 {
-    "name": "example",
+    "name": "example-next-intl",
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "next dev",
+        "dev": "next dev --port 3002",
         "build": "next build",
-        "start": "next start",
+        "start": "next start --port 3002",
         "lint": "oxlint --config ../../.oxlintrc.json",
         "lint:fix": "oxlint --fix --config ../../.oxlintrc.json",
         "format": "oxfmt -c ../../.oxfmtrc.json",
@@ -15,6 +15,7 @@
     "dependencies": {
         "@redirection.io/vercel-middleware": "workspace:*",
         "next": "catalog:",
+        "next-intl": "^4.13.0",
         "react": "19.2.4",
         "react-dom": "19.2.4"
     },
