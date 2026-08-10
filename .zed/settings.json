@@ -13,4 +13,12 @@
     "allowed": false,
   },
   "language_servers": ["!eslint", "!biome", "..."],
+  "languages": {
+    "TypeScript": {
+      "language_servers": ["vstls", "!typescript-language-server", "!eslint", "!biome", "..."],
+    },
+    "TSX": {
+      "language_servers": ["vstls", "!typescript-language-server", "!eslint", "!biome", "..."],
+    },
+  },
 }
