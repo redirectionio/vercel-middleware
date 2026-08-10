@@ -148,7 +148,7 @@ async function handler(
     const ip = ipAddress(request);
     const redirectionIORequest = createRedirectionIORequest({
         url: new URL(request.url),
-        headers: Object.fromEntries(Object.entries(request.headers)) as Record<string, string>,
+        headers: Object.fromEntries(request.headers.entries()) as Record<string, string>,
         method: request.method,
         ip,
     });
@@ -163,10 +163,16 @@ async function handler(
 
     const proxyResponseTime = Date.now();
 
-    response.headers.set(REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER, proxyResponseTime.toString());
-    response.headers.set(REDIRECTIONIO_START_TIME_HEADER, startTimestamp.toString());
-    response.headers.set(REDIRECTIONIO_MATCH_TIME_TIME_HEADER, actionMatchTime.toString());
-    response.headers.set(REDIRECTIONIO_ACTION_HEADER, action.serialize());
+    const forwardHeaders = new Headers({
+        [REDIRECTIONIO_PROXY_RESPONSE_TIME_HEADER]: proxyResponseTime.toString(),
+        [REDIRECTIONIO_START_TIME_HEADER]: startTimestamp.toString(),
+        [REDIRECTIONIO_MATCH_TIME_TIME_HEADER]: actionMatchTime.toString(),
+        [REDIRECTIONIO_ACTION_HEADER]: action.serialize(),
+    });
+
+    if (response.headers.get("x-middleware-next") === "1") {
+        return next({ request: { headers: forwardHeaders } });
+    }
 
     const url = new URL(request.url);
     const location = response.headers.get("Location");
@@ -316,7 +322,7 @@ async function proxy(
     try {
         const statusCodeBeforeResponse = action.get_status_code(0);
 
-        let response;
+        let response: Response;
 
         if (statusCodeBeforeResponse === 0) {
             response = await fetchResponse(request, true);
@@ -354,6 +360,8 @@ async function proxy(
             }
         });
 
+        const bodyFilter = action.create_body_filter(backendStatusCode, headerMap);
+
         const newHeaderMap = action.filter_headers(headerMap, backendStatusCode, REDIRECTIONIO_ADD_HEADER_RULE_IDS);
         const newHeaders = new Headers();
 
@@ -370,9 +378,6 @@ async function proxy(
             statusText: response.statusText,
             headers: newHeaders,
         });
-
-        newHeaderMap.remove_header("content-encoding");
-        const bodyFilter = action.create_body_filter(backendStatusCode, newHeaderMap);
 
         // Skip body filtering
         if (bodyFilter.is_null()) {

@@ -1268,10 +1268,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redirection.io/redirectionio@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@redirection.io/redirectionio@npm:3.0.0"
-  checksum: 10c0/8b4e39c5f04fa73c716d1529df8d27aae0f85eb33027f133c9451892509dfb3743e6af8eb50747b4f14ebf6650485907f82a5722b3b7c4f77f1621f89550fd0f
+"@redirection.io/redirectionio@npm:^3.3.0":
+  version: 3.3.0
+  resolution: "@redirection.io/redirectionio@npm:3.3.0"
+  checksum: 10c0/4d717759b11110b366c033a8eff8b5036e0823f296fe0f80ef63ee9a9d0ac7612d97db33bb2d79d12d488420c06fb9288ac93c7383a468300b0f8272e063213a
   languageName: node
   linkType: hard
 
@@ -1279,7 +1279,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@redirection.io/vercel-middleware@workspace:packages/vercel-middleware"
   dependencies:
-    "@redirection.io/redirectionio": "npm:^3.0.0"
+    "@redirection.io/redirectionio": "npm:^3.3.0"
     "@types/node": "npm:^25.2.2"
     "@vercel/edge": "npm:^1.1.2"
     "@vercel/functions": "npm:^1.4.1"
