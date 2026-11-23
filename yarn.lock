@@ -1295,6 +1295,8 @@ __metadata:
   peerDependenciesMeta:
     next:
       optional: true
+  bin:
+    redirectionio-vercel-firewall-sync: dist/firewall-cli.js
   languageName: unknown
   linkType: soft
 
