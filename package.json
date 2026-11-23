@@ -9,7 +9,7 @@
             "apps/*"
         ]
     },
-    "packageManager": "yarn@4.14.1",
+    "packageManager": "yarn@4.19.0",
     "scripts": {
         "dev": "turbo run dev",
         "build": "turbo run build",
@@ -24,11 +24,11 @@
         "changeset-version": "changeset version"
     },
     "devDependencies": {
-        "@changesets/cli": "^2.31.0",
+        "@changesets/cli": "^2.31.1",
         "oxfmt": "catalog:",
         "oxlint": "catalog:",
-        "playwright": "^1.60",
-        "turbo": "^2.9.6",
+        "playwright": "^1.65",
+        "turbo": "^2.11.13",
         "typescript": "catalog:"
     }
 }
