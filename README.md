@@ -137,6 +137,64 @@ const nextConfig: NextConfig = {
 };
 ```
 
+## Vercel Firewall: allow redirection.io managed instances
+
+Vercel's firewall may block the IPs of redirection.io managed instances. This package can keep a Vercel custom firewall rule (action `bypass`) in sync with the IP list published at `https://api.redirection.io/ips`. The rule is created at the top of the custom rules, then updated only when the IP list changes.
+
+Environment variables:
+
+| Variable                               | Required | Description                                                                         |
+| -------------------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `VERCEL_TOKEN`                         | yes      | Vercel access token with access to the project                                      |
+| `VERCEL_PROJECT_ID`                    | yes      | Vercel project id (`prj_...`)                                                       |
+| `VERCEL_TEAM_ID`                       | no       | Vercel team id (`team_...`), required if the project belongs to a team              |
+| `REDIRECTIONIO_FIREWALL_RULE_NAME`     | no       | Name of the managed rule, defaults to `redirection.io managed instances`            |
+| `REDIRECTIONIO_FIREWALL_BYPASS_SYSTEM` | no       | `true` to also bypass Vercel system mitigations (beta feature, requires access)     |
+
+### Periodic CI run
+
+```yaml
+name: Sync redirection.io IPs in Vercel firewall
+on:
+    schedule:
+        - cron: "0 * * * *"
+    workflow_dispatch:
+jobs:
+    sync:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+            - run: npx -p @redirection.io/vercel-middleware redirectionio-vercel-firewall-sync
+              env:
+                  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+                  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+                  VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+```
+
+### Vercel Cron Job
+
+Create a route handler (Next.js App Router example, `app/api/redirectionio-firewall/route.ts`):
+
+```typescript
+import { createFirewallSyncRouteHandler } from "@redirection.io/vercel-middleware/firewall";
+
+export const GET = createFirewallSyncRouteHandler();
+```
+
+Then declare the cron in `vercel.json`:
+
+```json
+{
+    "crons": [{ "path": "/api/redirectionio-firewall", "schedule": "0 * * * *" }]
+}
+```
+
+The handler requires the `CRON_SECRET` environment variable: Vercel sends it as `Authorization: Bearer <CRON_SECRET>` when calling cron jobs. Make sure the redirection.io middleware does not handle this route (see `matcherRegex`).
+
+You can also call `syncRedirectionIoFirewallRule(options)` directly from your own code.
+
 ### Development
 
 Run the example apps and the lib compilation :
